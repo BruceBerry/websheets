@@ -4,6 +4,8 @@ var session = require('express-session');
 var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
 var upload = require("multer")({ dest: 'uploads/' });
+var favicon = require("serve-favicon");
+var debug = require("express-debug");
 
 var fs = require("fs");
 var os = require("os");
@@ -31,10 +33,12 @@ if (fs.existsSync(argv.load)) {
 
 
 var app = express();
+app.use(favicon("static/favicon.ico"));
 app.use(cookieParser());
 app.use(session({secret: "TODO", resave: false, saveUninitialized: true}));
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
+// debug(app, { });
  
 
 app.use("/static", express.static("static"));
@@ -67,6 +71,9 @@ app.post("/auth/login", function(req, res) {
     res.end();
   } else
     res.status(400).end("invalid username/password");
+});
+app.get("/auth/whoami", isUser, function(req, res) {
+  res.end(req.session.user);
 });
 app.post("/auth/logout", isUser, function(req, res) {
   req.session.destroy();

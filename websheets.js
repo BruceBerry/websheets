@@ -44,7 +44,7 @@ WebSheet.prototype = {
   },
 
   listTables: function() {
-    return this.tables.map(t => _.pick(t, "name", "description", "owner"));
+    return _.map(this.tables, t => _.pick(t, "name", "description", "owner"));
   },
   // import
 };

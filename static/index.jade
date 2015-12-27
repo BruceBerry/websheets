@@ -1,0 +1,167 @@
+extends ./base
+
+mixin template
+  script(type='text/template')&attributes(attributes)
+    block
+
+block scripts
+  script(type='text/javascript', src='lib/underscore/underscore.js')
+  script(type='text/javascript', src='lib/routie/routie.js')
+  script(type='text/javascript', src='lib/handlebars/handlebars.js')  
+  script(type='text/javascript', src='websheets.js')
+    
+block title
+  title WebSheets
+
+block content
+  #alert
+
+  #content
+
+  +template#login-template.
+    <form class="navbar-form navbar-right" id="nav-login-form">
+      <input class="form-control" type="text" placeholder="Username" name="username" />
+      <input class="form-control" type="password" placeholder="Password" name="password" />
+      <button class="btn btn-primary" id="login-button" type="button">Login</button>
+      <button class="btn btn-success" id="create-button" type="button">Create</button>
+    </form>
+
+  +template#logout-template.
+    <div class="navbar-right">
+      <p class="navbar-text">Welcome {{w.user}}</p>
+      <button class="btn btn-primary navbar-btn" id="logout-button" type="button">Logout</button>
+    </div>
+  
+  +template#users-template.
+    <h1>Registered Users</h1>
+    <ul>
+      {{#each this}}
+      <li>{{this.user}}</li>
+        {{#if this.tables.length}}
+          <ul>
+          {{#each this.tables}}
+          <li><a href="#tables/{{this}}">{{this}}</a></li>
+          {{/each}}
+          </ul>
+        {{/if}}
+      {{/each}}
+    </ul>
+
+  +template#tables-template.
+    <h1>Tables</h1>
+    <ul>
+      {{#each this}}
+      <li>
+        <b><a href="#tables/{{name}}">{{name}}</a></b>:
+        <small>{{description}}</small> - 
+        <button data-table="{{name}}" class="btn btn-danger btn-xs btn-delete">Delete</button>
+      </li>
+      {{/each}}
+
+  +template#table-template.
+    <h1>{{name}}</h1>
+    <small>{{description}}<small>
+
+  +template#home-template.
+    <div class="jumbotron">
+      <h1 style="text-align: center">Welcome to WebSheets</h1>
+
+      <p>WebSheets are a new programming paradigm to develop secure Web
+      Applications. The web interface is currently in prototype stage.
+      Login or create an account to import websheets or interact
+      with existing websheets developed by other users.</p>
+
+      <hr/>
+
+      {{#if w.user}}
+      <h4>You are logged in as {{w.user}}</h4>
+      {{else}}
+      <h4>You are currently not logged in. Use the login form in the
+      navigation bar to login or create a new account.</h4>
+      {{/if}}
+
+    </div>
+
+  +template#alert-template.
+    <div class="alert alert-{{type}} alert-dismissible fade in" role="alert">
+      <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+        <span aria-hidden="true">&times;</span>
+      </button>
+      {{msg}}
+    </div>
+
+  +template#eval-template.
+    <h1>Eval Console</h1>
+    <p>Type a WF expression in the following form and the result will be appended below.</p>
+    <form class="form-inline" id="eval-form">
+      <input class="form-control" id="eval" type="text" />
+      <button type="submit" id="eval-btn" class="btn btn-default">Eval</button>
+    </form>
+    <div><ul id="eval-console"></ul></div>
+
+  +template#drop-template.
+    <span class="dropdown">
+      <span data-toggle="dropdown" class="dropdown caret"></span>
+      <ul class="dropdown-menu">
+        <!-- <li class="dropdown-header">Row Owner: {{row.owner}}</li>
+             <li role="separator" class="divider"></li> -->
+        <li><a class="row-insert-before" data-index={{row.index}}>Insert Row Before</a></li>
+        <li><a class="row-insert-after" data-index={{row.index}}>Insert Row After</a></li>
+        <li><a class="row-delete" data-index={{row.index}}>Delete Row</a></li>
+      </ul>
+    </span>
+
+  +template#import-template.
+    <h1>XLS Import</h1>
+    <small>Import WebSheet tables from an XLS file, admin only</small>
+    <form class="form-inline" id="import-form">
+      <input class="form-control" type="file" id="xls">
+      <button type="submit" id="import-btn" class="btn btn-default">Import XLS</button>
+    </form>
+
+  +template#admin-template.
+    <h1>Admin Console</h1>
+    <small>Click the buttons below to execute privileged actions</small>
+    <br/><br/>
+    <p>
+      <div class="btn-group" role="group">
+      <button type="submit" id="purge-btn" class="btn btn-primary">Purge Cache</button>
+      <button type="submit" id="reset-btn" class="btn btn-warning">Delete All</button>
+      <button type="submit" id="quit-btn" class="btn btn-danger">Quit</button>
+      </div>
+    </p>
+
+  +template#input-template.
+    <h1>{{table.name}} - Expression View</h1>
+    <p>{{table.description}}</p>
+    <p><a class="btn btn-default" href="#tables/{{table.name}}">Switch to Value View</a></p>
+    <p>Table perm: {{{pcode table.tperm.read.input}}}/{{{pcode table.tperm.write.input}}}</p>
+    <h2>Permissions</h2>
+    <table class='table table-bordered table-hover'>
+      <thead>
+        <tr>
+          <th></th>
+          {{#each table.colnames}}
+          <th>{{this}}</th>
+          {{/each}}
+          <th>All Columns</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th>Read</th>
+          {{#each table.colperms}}
+          <td><code>{{{pcode read.input}}}</code></td>
+          {{/each}}
+          <td><code>{{{pcode table.rowperm.read.input}}}</code></td>
+        </tr>
+        <tr>
+          <th>Write</th>
+          {{#each table.colperms}}
+          <td><code>{{{pcode write.input}}}</code></td>
+          {{/each}}
+          <td><code>{{{pcode table.rowperm.write.input}}}</code></td>
+        </tr>
+      </tbody>
+    </table>
+

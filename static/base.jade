@@ -1,0 +1,45 @@
+doctype html
+html(lang="en")
+  head
+    meta(charset='utf8')
+    meta(description='WebSheets Web Interface')
+    meta(author='Riccardo Pelizzi')
+    block title
+    
+    script(type='text/javascript', src='lib/jquery.js')
+    script(type='text/javascript', src='lib/bootstrap/js/bootstrap.js')
+    link(rel='stylesheet', href='lib/bootstrap/css/bootstrap.css')
+    //- link(rel='stylesheet', href="static/bootstrap/css/bootstrap-thelme.css")
+    link(rel='stylesheet', href='style.css')
+    block scripts
+
+  body
+    nav.navbar.navbar-default
+      .container
+        .navbar-header
+          a.navbar-brand(href='#') Home
+
+        ul.nav.navbar-nav
+          li
+            a(href='#users') Users
+          li
+            a(href='#tables') Tables
+          li
+            a(href='#eval') Eval
+          li
+            a(href='#import') Import
+          li#admin-li
+            a(href='#admin') Admin
+        div#nav-right
+
+    .container
+      .row
+        .col-md-12
+          block content
+          
+      .row
+        .col-md-offset-2.col-md-8
+          hr
+          footer.row
+            p Built by 
+              a(href="http://www.cs.sunysb.edu/~rpelizzi/") Riccardo Pelizzi
