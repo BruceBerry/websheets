@@ -1,5 +1,5 @@
 "use strict";
-var _ = require("lodash");
+var _ = require("underscore");
 var fs = require("fs");
 
 module.exports = {
@@ -20,7 +20,6 @@ function WebSheet(tables, users) {
   this.users = users;
 }
 
-
 WebSheet.prototype = {
   save: function(path) {
     var json = JSON.stringify({users: this.users}); // TODO: tables
@@ -37,7 +36,10 @@ WebSheet.prototype = {
     return true;
   },
   deleteUser: function(user) {
+    if (user === "admin" || !this.users[user])
+      return false;
     delete this.users[user];
+    return true;
   },
   listUsers: function() {
     return Object.keys(this.users);

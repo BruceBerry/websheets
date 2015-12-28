@@ -64,7 +64,7 @@ var isAdmin = function(req, res, next) {
 };
 
 // TODO: ensure all api requests are same origin
-app.post("/auth/login", function(req, res) {
+app.post("/user/login", function(req, res) {
   if (ws.authUser(req.body.user, req.body.pass)) {
     req.session.user = req.body.user;
     console.log("logged in as", req.session.user);
@@ -72,35 +72,43 @@ app.post("/auth/login", function(req, res) {
   } else
     res.status(400).end("invalid username/password");
 });
-app.get("/auth/whoami", isUser, function(req, res) {
+app.get("/user/whoami", isUser, function(req, res) {
   res.end(req.session.user);
 });
-app.post("/auth/logout", isUser, function(req, res) {
+app.post("/user/logout", isUser, function(req, res) {
   req.session.destroy();
   res.end();
 });
-app.post("/auth/create", function(req, res) {
+app.post("/user/create", function(req, res) {
   if (ws.createUser(req.body.user, req.body.pass)) {
     console.log("created user", req.body.user);
     res.end();
   } else
     res.status(400).end("duplicate user");
 });
-app.post("/auth/delete", isUser, function(req, res) {
-  ws.deleteUser(req.session);
+app.post("/user/delete", isUser, function(req, res) {
+  ws.deleteUser(req.session.user);
   req.session.destroy();
   res.end();
 });
-app.post("/auth/delete/admin", isAdmin, function(req, res) {
-  ws.deleteUser(req.body.user);
+app.post("/user/:user/delete", isAdmin, function(req, res) {
+  ws.deleteUser(req.params.user);
   res.end();
 });
-app.get("/auth/users", isUser, function(req, res) {
+app.get("/user/list", isUser, function(req, res) {
   res.json(ws.listUsers());
 });
 
-app.get("/api/table/", isUser, function(req,res) {
+app.get("/table/list", isUser, function(req,res) {
   res.json(ws.listTables());
+});
+
+app.get("/table/:name/output", isUser, function(req, res) {
+  res.json(ws.valueTable(req.session.user, req.params.name));
+});
+
+app.get("/table/:name/input", isUser, function(req, res) {
+  res.jsons(ws.inputTable(req.session.user, req.params.name));
 });
 
 app.post("/api/import", isUser, upload.single("xls"), function(req, res) {

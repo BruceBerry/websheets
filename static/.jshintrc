@@ -1,0 +1,8 @@
+{
+  "jquery": true,
+  "esnext": true,
+  "browser": true,
+  "globals": {
+    "routie": true
+  }
+}
