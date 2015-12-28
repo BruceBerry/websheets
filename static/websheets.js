@@ -1,6 +1,9 @@
 "use strict";
 
-window.user = null;
+// current username
+var user = null;
+// handlebar templates
+var templates = {};
 
 var config = {
   clean: false,
@@ -25,13 +28,6 @@ Handlebars.registerHelper({
   }
 });
 
-// precompile handlebars templates
-var templates = {};
-["users", "tables", "login", "logout", "alert", "eval", "home", "drop",
- "import", "admin", "input"].forEach(
-  n => templates[n] = Handlebars.compile($(`#${n}-template`).html())
-);
-
 function displayWarning(msg) {
   $("#alert").html(templates.alert({type: "warning", msg}));
 }
@@ -51,7 +47,7 @@ function updateLoginDom() {
       $.post("/user/logout");
       if (user === "admin")
         $("#admin-li").fadeOut();
-      window.user = null;
+      user = null;
       if (document.location.hash === "")
         routes.home();
       else
@@ -60,13 +56,14 @@ function updateLoginDom() {
     });
   } else {
     $("#nav-right").html(templates.login());
-    $("#login-form").submit(function(e) {
-      e.preventDefault();
-      $("#login-button").trigger("click"); // trigger on enter
+    // trigger on enter
+    $("#nav-login-form").keypress(function(e) {
+      if (e.which === 13)
+        $("#login-button").trigger("click"); 
     });
     $("#login-button").click(function() {
       $.post("/user/login", $("#nav-login-form").serialize()).done(function() {
-        window.user = $("#nav-login-form [name=user]").val();
+        user = $("#nav-login-form [name=user]").val();
         if (user === "admin")
           $("#admin-li").fadeIn();
         if (document.location.hash === "")
@@ -111,115 +108,118 @@ var routes = {
   },
   valueTable: function(name) {
     $(".alert").fadeOut();
-    $.getJSON(`tables/${name}`).done(function(table) {
-      renderOutputTable(table);
-    }).fail(function(res) {
-      displayError(res.statusText);
+    $.getJSON(`/table/${name}/value`)
+      .done(renderOutputTable)
+      .fail(function(res) {
+        displayError(res.responseText);
     });
   },
   exprTable: function(name) {
     $(".alert").fadeOut();
-    $.getJSON(`tables/${name}/edit`).done(function(table) {
-      if (table.type === "static")
-        renderInputTable(table);
-      else
-        renderDynamicTable(table);
-    }).fail(function(res) {
-      doError(res.statusText);
+    $.getJSON(`/table/${name}/expr`)
+      .done(renderInputTable)
+      .fail(function(res) {
+        displayError(res.responseText);
     });
-    
+  },
+  home: function() {
+    $(".alert").fadeOut();
+    $("#content").html(templates.home());
+  },
+  eval: function() {
+    $(".alert").fadeOut();
+    $("#content").html(templates.eval());
+
+    $("#eval-form").on("submit", function(e) {
+      var expr = $("#eval").val();
+      var append = code => $("#eval-console").append(`<li><code>${code}</code></li>`);
+      $.post("/table/eval", {expr})
+        .done(res => append(res.responseText))
+        .fail(res => append(res.responseText));
+      e.preventDefault();
+    });
+  },
+  import: function() {
+    $(".alert").fadeOut();
+    $("#content").html(templates.import());
+
+    $("#import-btn").on("click", function(e) {
+      var f = $("#xls")[0].files[0];
+      if (!f)
+        return;
+      var fd = new FormData();
+      fd.append("xls", f);
+      $.ajax({
+        url: "/table/import",
+        data: fd,
+        processData: false,
+        contentType: false,
+        type: 'POST'
+      }).done(routes.tableList)
+        .fail(res => displayError(res.responseText));
+    });
+  },
+  admin: function() {
+    $(".alert").fadeOut();
+    $("#content").html(templates.admin());
+
+    $("#quit-btn").on("click", function() {
+      $.post("/quit")
+        .done(() => displayMessage("WebSheet server terminated."))
+        .fail(res => displayError(res.responseText));
+    });
+
+    $("#purge-btn").on("click", function() {
+      $.post("/purge")
+        .done(() => displayMessage("Cache Purged."))
+        .fail(res => doError(res.statusText));
+    });
+
+    $("#reset-btn").on("click", function() {
+      $.post("/reset")
+        .done(() => doMessage("All tables and users (except for admin) have been deleted."))
+        .fail(res => doError(res.statusText));
+    });
+
+  },
+  error: function() {
+    displayError("Invalid URL");
   }
-
-}
-
-
-function doTableEdit(name) {
-}
-
-function doHome() {
-  $(".alert").fadeOut();
-  $("#content").html(templates.home({user}));
-}
-
-function doEval() {
-  $(".alert").fadeOut();
-  $("#content").html(templates.eval());
-
-  $("#eval-form").on("submit", function(e) {
-    var expr = $("#eval").val();
-    $.post("eval", {expr})
-      .done(res => $("#eval-console").append("<li><code>" + res.message + "</code></li>"))
-      .fail(res => $("#eval-console").append("<li><code>" + res.statusText + "</code></li>"));
-    e.preventDefault();
-  });
-
-}
-
-function doImport() {
-  $(".alert").fadeOut();
-  $("#content").html(templates.import());
-
-  $("#import-btn").on("click", function(e) {
-    var f = $("#xls")[0].files[0];
-    if (!f)
-      return;
-    var fd = new FormData();
-    fd.append("xls", f);
-    $.ajax({
-      url: "import",
-      data: fd,
-      processData: false,
-      contentType: false,
-      type: 'POST'
-    }).done(doTableList)
-      .fail(res => doError(res.statusText));
-  });
-}
-
-function doAdmin() {
-  $(".alert").fadeOut();
-  $("#content").html(templates.admin());
-
-  $("#quit-btn").on("click", function() {
-    $.post("quit")
-      .done(() => doMessage("WebSheet server terminated."))
-      .fail(res => doError(res.statusText));
-  });
-
-  $("#purge-btn").on("click", function() {
-    $.post("purge")
-      .done(() => doMessage("Cache Purged."))
-      .fail(res => doError(res.statusText));
-  });
-
-  $("#reset-btn").on("click", function() {
-    $.post("reset")
-      .done(() => doMessage("All tables and users (except for admin) have been deleted."))
-      .fail(res => doError(res.statusText));
-  });
-
-}
+};
 
 
-// starts by figuring out if the user is logged in
-$.get("/user/whoami").done(function(u) {
-  user = u;
-  if (user === "admin")
-    $("#admin-li").fadeIn();
-}).fail(function() {
-  user = null;
-}).always(function() {
-  updateLoginDom();
-  // setup routing
-  routie({
-    "users": routes.userList,
-    "tables": routes.tableList,
-    "tables/:name": routes.valueTable,
-    "tables/:name/edit": routes.exprTable,
-    "eval": routes.eval,
-    "import": routes.import,
-    "admin": routes.admin,
-    "": routes.home,
-    "*": routes.error
+
+
+
+$(document).ready(function() {
+
+  // precompile handlebars templates
+  ["users", "tables", "login", "logout", "alert", "eval", "home", "drop",
+   "import", "admin", "input"].forEach(
+    n => templates[n] = Handlebars.compile($(`#${n}-template`).html())
+  );
+
+  // starts by figuring out if the user is logged in
+  $.get("/user/whoami").done(function(u) {
+    user = u;
+    if (user === "admin")
+      $("#admin-li").fadeIn();
+  }).fail(function() {
+    user = null;
+  }).always(function() {
+    // display the correct login and admin pane
+    updateLoginDom();
+    // start routing location.hash
+    routie({
+      "users": routes.userList,
+      "tables": routes.tableList,
+      "tables/:name": routes.valueTable,
+      "tables/:name/edit": routes.exprTable,
+      "eval": routes.eval,
+      "import": routes.import,
+      "admin": routes.admin,
+      "": routes.home,
+      "*": routes.error
+    });
   });
 });

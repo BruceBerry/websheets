@@ -21,8 +21,8 @@ block content
 
   +template#login-template.
     <form class="navbar-form navbar-right" id="nav-login-form">
-      <input class="form-control" type="text" placeholder="Username" name="username" />
-      <input class="form-control" type="password" placeholder="Password" name="password" />
+      <input class="form-control" type="text" placeholder="Username" name="user" />
+      <input class="form-control" type="password" placeholder="Password" name="pass" />
       <button class="btn btn-primary" id="login-button" type="button">Login</button>
       <button class="btn btn-success" id="create-button" type="button">Create</button>
     </form>
@@ -65,20 +65,19 @@ block content
 
   +template#home-template.
     <div class="jumbotron">
-      <h1 style="text-align: center">Welcome to WebSheets</h1>
+      <h1 style="text-align: center">WebSheets</h1>
 
       <p>WebSheets are a new programming paradigm to develop secure Web
-      Applications. The web interface is currently in prototype stage.
-      Login or create an account to import websheets or interact
+      Applications.</p>
+      <p>Login or create an account to create your own websheets or interact
       with existing websheets developed by other users.</p>
 
       <hr/>
 
       {{#if w.user}}
-      <h4>You are logged in as {{w.user}}</h4>
+      <h4>You are logged in as {{w.user}}.</h4>
       {{else}}
-      <h4>You are currently not logged in. Use the login form in the
-      navigation bar to login or create a new account.</h4>
+      <h4>You are currently not logged in.</h4>
       {{/if}}
 
     </div>

@@ -16,17 +16,16 @@ var WS = require("./websheets");
 var argv = argParser(process.argv.slice(2), {
   default: {
     port: 8000,
-    load: os.homedir() + "/.websheets"
+    saveFile: os.homedir() + "/.websheets"
   }
 });
 console.log("Listening on port", argv.port);
 
 var ws;
-if (fs.existsSync(argv.load)) {
-  console.log("Reading load file", argv.load);
-  ws = WS.load(argv.load);
-} else {
-  console.log("Creating new file", argv.load);
+if (fs.existsSync(argv.saveFile))
+  ws = WS.load(argv.saveFile);
+else {
+  console.log("No savefile, starting from scratch");
   ws = WS.create();
 }
 
@@ -64,6 +63,8 @@ var isAdmin = function(req, res, next) {
 };
 
 // TODO: ensure all api requests are same origin
+
+// 1. USER/AUTH
 app.post("/user/login", function(req, res) {
   if (ws.authUser(req.body.user, req.body.pass)) {
     req.session.user = req.body.user;
@@ -99,6 +100,30 @@ app.get("/user/list", isUser, function(req, res) {
   res.json(ws.listUsers());
 });
 
+// 2. ADMIN/DEBUG
+app.post("/eval", isUser, function(req, res) {
+  var result = ws.eval(req.session.user, req.body.code);
+  res.end(result);
+});
+app.post("/purge", isAdmin, function(req, res) {
+  ws.cache = {};
+  res.end();
+});
+app.post("/reset", isAdmin, function(req, res) {
+  ws = WS.create();
+  res.end();
+});
+app.post("/save", isAdmin, function(req, res) {
+  ws.save(argv.saveFile);
+  res.end();
+});
+app.post("/quit", isAdmin, function(req, res) {
+  ws.save(argv.saveFile);
+  res.end();
+  server.close();
+});
+
+
 app.get("/table/list", isUser, function(req,res) {
   res.json(ws.listTables());
 });
@@ -111,14 +136,18 @@ app.get("/table/:name/input", isUser, function(req, res) {
   res.jsons(ws.inputTable(req.session.user, req.params.name));
 });
 
-app.post("/api/import", isUser, upload.single("xls"), function(req, res) {
+app.post("/table/import", isUser, upload.single("xls"), function(req, res) {
   ws.import(req.file.path);
   fs.unlink(req.file.path);
   res.end();
 });
 
-// app.get("/api/table/:name/", isUser, function(req, res) {
-//   res.json(ws.)
-// });
+app.get("/table/:name/value", isUser, function(req, res) {
+  res.json(ws.valueTable(user, req.params.name));
+});
+
+app.get("/table/:name/expr", isUser, function(req, res) {
+  res.json(ws.exprTable(user, req.params.name));
+});
 
 var server = app.listen(argv.port);
