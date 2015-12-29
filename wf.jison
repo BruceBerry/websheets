@@ -90,50 +90,56 @@ expr : null    { $$ = new ast.Literal(null, new ast.Loc(this._$)); }
      | expr '!=' expr { $$ = new ast.Binary("!=", $1, $3, new ast.Loc(this._$)); }
      | expr 'in' expr { $$ = new ast.Binary("in", $1, $3, new ast.Loc(this._$)); }
      | expr 'notin' expr { $$ = new ast.Binary("not in", $1, $3, new ast.Loc(this._$)); }
-
-
      | '-' expr %prec NEG { $$ = new ast.Unary("-", $2, new ast.Loc(this._$)); }
      | '!' expr { $$ = new ast.Unary("!", $2, new ast.Loc(this._$)); }
-
      | '(' expr ')' { $$ = $2; }
 
-     | '[' list_els ']' { $$ = new ast.List($2, new ast.Loc(this._$)); }
-     | '{' tuple_els '}' { $$ = new ast.Tuple($2, new ast.Loc(this._$)); }
+     | '[' n_list_els ']' { $$ = new ast.List($2, new ast.Loc(this._$)); }
+     | '{' n_tuple_els '}' { $$ = new ast.Tuple($2, new ast.Loc(this._$)); }
 
      | 'if' expr 'then' expr 'else' expr { $$ = new ast.IfThenElse($2, $4, $6, new ast.Loc(this._$)); }
+
+     | expr '.' ID { $$ = new ast.Select($1,$3, new ast.Loc(this._$)); }
+     | expr '.' NUM { $$ = new ast.Select($1, $3, new ast.Loc(this._$)); }
+     | expr '{' proj_els '}' { $$ = new ast.Project($1, $3, new ast.Loc(this._$)); }
+     | '{' expr 'for' for_els 'when' expr '}' { $$ = new ast.Generate($2, $4, $6, new ast.Loc(this._$)); }
+     | '{' expr 'for' for_els '}' { $$ = new ast.Generate($2,$4, true, new ast.Loc(this._$)); }
+     | expr '[' expr ']' { $$ = new ast.Filter($1, $3, new ast.Loc(this._$)); }
+
+     | ID '(' n_list_els ')' { $$ = new ast.Call($1, $3, new ast.Loc(this._$)); }
 ;
 
-list_els : /* empty */ { $$ = [] }
-         | f_list_els  { $$ = $1 }
+n_list_els : /* empty */ { $$ = [] }
+           | list_els  { $$ = $1 }
 ;
 
-f_list_els: expr                { $$ = [$1] }
-          | expr ',' f_list_els { $$ = $3; $$.unshift($1); }
+list_els: expr                { $$ = [$1] }
+        | expr ',' list_els   { $$ = $3; $$.unshift($1); }
 ;
 
-tuple_els: /* empty */ { $$ = {} }
-         | f_tuple_els { $$ = $1 }
+n_tuple_els: /* empty */ { $$ = {} }
+           | tuple_els   { $$ = $1 }
 ;
 
-f_tuple_els: ID ':' expr                 { $$ = {}; $$[$1] = $3; }
-           | ID ':' expr ',' f_tuple_els { $$ = $5; $$[$1] = $3; }
+tuple_els: ID ':' expr                 { $$ = {}; $$[$1] = $3; }
+         | ID ':' expr ',' tuple_els   { $$ = $5; $$[$1] = $3; }
 ;
 
-/*
-     | expr '.' expr { SelectExpr $1 $3 }
-     | expr '{' f_list_els '}' { ProjExpr $1 $3 }
-     | '{' expr 'for' for_els 'when' expr '}' { GenExpr $2 $4 $6 }
-     | '{' expr 'for' for_els '}' { GenExpr $2 $4 (BoolExpr True) }
-     | expr '[' expr ']' { BGenExpr $1 $3 }
-     | id '(' list_els ')' { CallExpr $1 $3 }
+proj_els: id_proj_els  { $$ = $1 }
+        | num_proj_els { $$ = $1 }
+;
 
+id_proj_els: ID                 { $$ = [$1]; }
+           | ID ',' id_proj_els { $$ = $3; $$.unshift($1); }
+;
 
+num_proj_els: NUM                  { $$ = [Number($1)]; }
+            | NUM ',' num_proj_els { $$ = $3; $$.unshift(Number($1)); }
+;
 
-
-for_els: id 'in' expr { M.singleton $1 $3 }
-       | id 'in' expr ',' for_els { M.insert $1 $3 $5 }
-*/
-
+for_els: ID 'in' expr { $$ = {}; $$[$1] = $3; }
+       | ID 'in' expr ',' for_els { $$ = $5; $$[$1] = $3; }
+;
 %%
 
 var ast = require("./ast");
