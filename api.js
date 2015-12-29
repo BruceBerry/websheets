@@ -21,3 +21,9 @@ _.map(methods.ws, function(m) {
   return m;
 });
 console.log(methods);
+
+re = /app\.(\w+)\("([\/\w\-:]+")/ig;
+while(match = re.exec(index)) {
+  if (match[1] === "use") continue;
+  console.log(match[1].toUpperCase(), match[2]);
+}

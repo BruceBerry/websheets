@@ -101,23 +101,28 @@ app.get("/user/list", isUser, function(req, res) {
 });
 
 // 2. ADMIN/DEBUG
-app.post("/eval", isUser, function(req, res) {
+app.post("/debug/eval", isUser, function(req, res) {
   var result = ws.eval(req.session.user, req.body.code);
   res.end(result);
 });
-app.post("/purge", isAdmin, function(req, res) {
-  ws.cache = {};
+app.post("/admin/purge", isAdmin, function(req, res) {
+  ws.purge();
   res.end();
 });
-app.post("/reset", isAdmin, function(req, res) {
+app.post("/admin/reset", isAdmin, function(req, res) {
   ws = WS.create();
   res.end();
 });
-app.post("/save", isAdmin, function(req, res) {
+app.post("/admin/load", isAdmin, upload.single("json"), function(req, res) {
+  ws = WS.load(req.file.path);
+  fs.unlink(req.file.path);
+  res.end();
+});
+app.post("/admin/save", isAdmin, function(req, res) {
   ws.save(argv.saveFile);
   res.end();
 });
-app.post("/quit", isAdmin, function(req, res) {
+app.post("/admin/quit", isAdmin, function(req, res) {
   ws.save(argv.saveFile);
   res.end();
   server.close();
