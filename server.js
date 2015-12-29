@@ -11,7 +11,7 @@ var fs = require("fs");
 var os = require("os");
 var argParser = require('minimist');
 
-var WS = require("./websheets");
+var WS = require("./app/websheets");
 
 var argv = argParser(process.argv.slice(2), {
   default: {
