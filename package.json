@@ -10,6 +10,7 @@
     "express-debug": "^1.1.1",
     "express-session": "^1.12.1",
     "jade": "^1.11.0",
+    "jison": "^0.4.15",
     "lodash": "^3.10.1",
     "minimist": "^1.2.0",
     "multer": "^1.1.0",

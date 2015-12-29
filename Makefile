@@ -5,6 +5,8 @@ watch:
     jade -P static/; \
   done
 
+clean:
+	rm -rf wf.js static/index.html static/base.html
 
 api:
-	grep -E "(ws|WS)\.(\w+)\(" index.js
+	node --es_staging --harmony_destructuring api.js
