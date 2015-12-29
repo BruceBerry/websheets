@@ -147,7 +147,7 @@ var ast = require("./ast");
 exports.parseCell = function(src, cell) {
   try {
     var ast = exports.parse(src);
-    ast.visitAll(function(n) { console.log(n.type); n.loc.cell = cell });
+    ast.visitAll(function(n) { n.loc.cell = cell });
     return ast;
   } catch(e) {
     e.cell = cell;
