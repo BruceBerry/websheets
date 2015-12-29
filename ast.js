@@ -26,7 +26,7 @@ exports.Literal = class Literal extends Node {
     super("Literal", location);
     this.value = data;
   }
-  toString() { return this.value.toString() }
+  toString() { return this.value.toString(); }
 };
 
 exports.Identifier = class Identifier extends Node {
@@ -102,7 +102,7 @@ exports.Project = class Project extends Node {
     this.ixCols = r;
     this.sType = typeof this.ixCols[0] === "string" ? "col" : "row";
   }
-  toString() { debugger; return `(${this.l.toString()}{${this.ixCols.map(p=>p.toString()).join(", ")}})`; }
+  toString() { return `(${this.l.toString()}{${this.ixCols.map(p=>p.toString()).join(", ")}})`; }
 };
 
 exports.Generate = class Generate extends Node {
@@ -113,7 +113,7 @@ exports.Generate = class Generate extends Node {
     this.cond = cond;
   }
   toString() { return `{${this.expr.toString()} for ${_.map(this.srcs, (v,k) => k + ' in ' + v.toString()).join(", ")} when ${this.cond.toString()}}`; }
-}
+};
 
 exports.Filter = class Filter extends Node {
   constructor(l, filter, location) {
@@ -122,7 +122,7 @@ exports.Filter = class Filter extends Node {
     this.filter = filter;
   }
   toString() { return `(${this.l.toString()}[${this.filter.toString()}])`; }
-}
+};
 
 exports.Call = class Call extends Node {
   constructor(n, args, location) {
@@ -131,4 +131,4 @@ exports.Call = class Call extends Node {
     this.args = args;
   }
   toString() { return `${this.name}(${this.args.map(k=>k.toString()).join(", ")})`; }
-}
+};
