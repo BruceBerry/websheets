@@ -113,22 +113,31 @@ app.post("/admin/reset", isAdmin, function(req, res) {
   ws = WS.create();
   res.end();
 });
-app.post("/admin/load", isAdmin, upload.single("json"), function(req, res) {
-  ws = WS.load(req.file.path);
-  fs.unlink(req.file.path);
-  res.end();
-});
-app.post("/admin/save", isAdmin, function(req, res) {
-  ws.save(argv.saveFile);
-  res.end();
-});
 app.post("/admin/quit", isAdmin, function(req, res) {
   ws.save(argv.saveFile);
   res.end();
   server.close();
 });
+app.post("/admin/load", isAdmin, upload.single("load"), function(req, res) {
+  try {
+    ws = WS.load(req.file.path);
+    res.end();
+  } finally {
+    fs.unlink(req.file.path);
+  }
+});
+app.post("/admin/save", isAdmin, function(req, res) {
+  ws.save(req.body.path || argv.safeFile);
+  res.end();
+});
+app.post("/admin/download", isAdmin, function(req, res) {
+  var json = JSON.stringify(ws.toJSON());
+  res.set('Content-Type', 'application/octet-stream');
+  res.set('Content-Disposition', 'attachment;filename="ws.json"');
+  res.send(json);
+});
 
-
+// 3. WS API
 app.get("/table/list", isUser, function(req,res) {
   res.json(ws.listTables());
 });
@@ -138,21 +147,24 @@ app.get("/table/:name/output", isUser, function(req, res) {
 });
 
 app.get("/table/:name/input", isUser, function(req, res) {
-  res.jsons(ws.inputTable(req.session.user, req.params.name));
+  res.json(ws.inputTable(req.session.user, req.params.name));
 });
 
 app.post("/table/import", isUser, upload.single("xls"), function(req, res) {
-  ws.import(req.file.path);
-  fs.unlink(req.file.path);
-  res.end();
+  try {
+    ws.import(req.session.user, req.file.path);
+    res.end();
+  } finally {
+    fs.unlink(req.file.path);
+  }
 });
 
 app.get("/table/:name/value", isUser, function(req, res) {
-  res.json(ws.valueTable(user, req.params.name));
+  res.json(ws.valueTable(req.session.user, user, req.params.name));
 });
 
 app.get("/table/:name/expr", isUser, function(req, res) {
-  res.json(ws.exprTable(user, req.params.name));
+  res.json(ws.exprTable(req.session.user, req.params.name));
 });
 
 var server = app.listen(argv.port);

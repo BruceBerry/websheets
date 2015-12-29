@@ -19,6 +19,20 @@ class Node {
     this.type = type;
     this.loc = location;
   }
+  // stop automatic visiting by returning false
+  visitAll(f) {
+    if (f(this) !== false)
+      this.children().forEach(n => n.visitAll(f));
+  }
+  visit(f) {
+    if (f[this.type])
+     if (f[this.type](this) === false)
+      return;
+    this.children().forEach(n => n.visit(f));
+  }
+  toString() { throw "Abstract class"; }
+  children() { return []; }
+  eval(user, ws) { throw "Abstract class"; }
 }
 
 exports.Literal = class Literal extends Node {
@@ -45,6 +59,7 @@ exports.Binary = class Binary extends Node {
     this.r = r;
   }
   toString() { return `(${this.l} ${this.op} ${this.r})`; }
+  children() { return [this.l, this.r]; }
 };
 
 exports.Unary = class Unary extends Node {
@@ -54,6 +69,7 @@ exports.Unary = class Unary extends Node {
     this.arg = arg;
   }
   toString() { return `(${this.op}${this.arg})`; }
+  children() { return [this.arg]; }
 };
 
 exports.List = class List extends Node {
@@ -62,6 +78,7 @@ exports.List = class List extends Node {
     this.elements = elements;
   }
   toString() { return `[${this.elements.map(k=>k.toString()).join(", ")}]`; }
+  children() { return this.elements; }
 };
 
 exports.Tuple = class Tuple extends Node {
@@ -73,6 +90,7 @@ exports.Tuple = class Tuple extends Node {
     keys.forEach(k => this.map[k] = map[k]);
   }
   toString() { return `{${_.map(this.map, (v,k)=>k+":"+v.toString()).join(", ")}}`; }
+  children() { return _.values(this.map); }
 };
 
 exports.IfThenElse = class IfThenElse extends Node {
@@ -83,6 +101,7 @@ exports.IfThenElse = class IfThenElse extends Node {
     this.else = e;
   } 
   toString() { return `if (${this.cond.toString()}) then (${this.t.toString()}) else (${this.e.toString()})`; }
+  children() { return [this.cond, this.then, this.else]; }
 };
 
 exports.Select = class Select extends Node {
@@ -93,6 +112,7 @@ exports.Select = class Select extends Node {
     this.sType = typeof this.ixCol === "string" ? "col" : "row";
   }
   toString() { return `(${this.l.toString()}.${this.ixCol.toString()})`; }
+  children() { return [this.l]; }
 };
 
 exports.Project = class Project extends Node {
@@ -103,6 +123,7 @@ exports.Project = class Project extends Node {
     this.sType = typeof this.ixCols[0] === "string" ? "col" : "row";
   }
   toString() { return `(${this.l.toString()}{${this.ixCols.map(p=>p.toString()).join(", ")}})`; }
+  children() { return [this.l]; }
 };
 
 exports.Generate = class Generate extends Node {
@@ -113,6 +134,7 @@ exports.Generate = class Generate extends Node {
     this.cond = cond;
   }
   toString() { return `{${this.expr.toString()} for ${_.map(this.srcs, (v,k) => k + ' in ' + v.toString()).join(", ")} when ${this.cond.toString()}}`; }
+  children() { return [this.expr, this.srcs, this.cond]; }
 };
 
 exports.Filter = class Filter extends Node {
@@ -122,6 +144,7 @@ exports.Filter = class Filter extends Node {
     this.filter = filter;
   }
   toString() { return `(${this.l.toString()}[${this.filter.toString()}])`; }
+  children() { return [this.l, this.filter]; }
 };
 
 exports.Call = class Call extends Node {
@@ -131,4 +154,5 @@ exports.Call = class Call extends Node {
     this.args = args;
   }
   toString() { return `${this.name}(${this.args.map(k=>k.toString()).join(", ")})`; }
+  children() { return this.args; }
 };

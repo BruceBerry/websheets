@@ -133,7 +133,7 @@ var routes = {
     $("#eval-form").on("submit", function(e) {
       var expr = $("#eval").val();
       var append = code => $("#eval-console").append(`<li><code>${code}</code></li>`);
-      $.post("/table/eval", {expr})
+      $.post("/debug/eval", {expr})
         .done(res => append(res.responseText))
         .fail(res => append(res.responseText));
       e.preventDefault();
@@ -164,22 +164,24 @@ var routes = {
     $("#content").html(templates.admin());
 
     $("#quit-btn").on("click", function() {
-      $.post("/quit")
+      $.post("/admin/quit")
         .done(() => displayMessage("WebSheet server terminated."))
         .fail(res => displayError(res.responseText));
     });
 
     $("#purge-btn").on("click", function() {
-      $.post("/purge")
+      $.post("/admin/purge")
         .done(() => displayMessage("Cache Purged."))
         .fail(res => doError(res.statusText));
     });
 
     $("#reset-btn").on("click", function() {
-      $.post("/reset")
+      $.post("/admin/reset")
         .done(() => doMessage("All tables and users (except for admin) have been deleted."))
         .fail(res => doError(res.statusText));
     });
+
+    // TODO: load, save and download
 
   },
   error: function() {
