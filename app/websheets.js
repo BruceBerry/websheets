@@ -2,50 +2,64 @@
 var _ = require("underscore");
 var fs = require("fs");
 
-module.exports = {
-  create: () => new WebSheet(),
-  load: function(path) {
-    var json = JSON.parse(fs.readFileSync(path, "utf8"));
-    return new WebSheet({}, json.users); // TODO: tables
+var cjson = require("./cjson");
+var i = require("./input");
+var o = require("./output");
+
+class WebSheet {
+  constructor() {
+    this.users = {admin: {user: "admin", pass: "pass"}};
+    this.input = {};
+    this.output = {values:{}, permissions:{}};
   }
-};
 
-function WebSheet(tables, users) {
-  if (!tables)
-    tables = {};
-  if (!users)
-    users = {admin: {user: "admin", pass: "pass"}};
-  this.tables = tables;
-  this.cache = {};
-  this.users = users;
-}
-
-WebSheet.prototype = {
-  save: function(path) {
-    var json = JSON.stringify({users: this.users}); // TODO: tables
+  save(path) {
+    var json = cjson.stringify(this);
     fs.writeFileSync(path, json, "utf8");
-  },
+  }
+  static load(path) {
+    var json = fs.readFileSync(path, "utf8");
+    return cjson.parse(json);
+  }
 
-  authUser: function(user, pass) {
+  authUser(user, pass) {
     return this.users[user] && this.users[user].pass === pass;
-  },
-  createUser: function(user, pass) {
+  }
+  createUser(user, pass) {
     if (this.users[user])
       return false;
     this.users[user] = {user, pass};
     return true;
-  },
-  deleteUser: function(user) {
+  }
+  deleteUser(user) {
     if (user === "admin" || !this.users[user])
       return false;
     delete this.users[user];
     return true;
-  },
-  listUsers: function() {
-    return Object.keys(this.users);
-  },
-  listTables: function() {
-    return _.map(this.tables, t => _.pick(t, "name", "description", "owner"));
-  },
-  // import
-};
+  }
+  listUsers() {
+    // [{user, [tablenames]}]
+    return _(this.users).map(u => {
+      return {user: u.user, tables: _.chain(this.input).where({owner: u.user}).pluck("name").value()};
+    });
+  }
+
+  listTables() {
+    // [publicTable]
+    return _.map(this.input, t => _.pick(t, "name", "description", "owner"));
+  }
+  listKeywords() {
+    // {tables, columns, functions}
+    return {
+      tables: _(this.input).keys(),
+      columns: _.chain(this.input).pluck("columns").flatten().value(),
+      functions: [] // TODO
+    };
+  }
+
+  getInputTable(user) {
+
+  }
+}
+cjson.register(WebSheet);
+exports.WebSheet = WebSheet;

@@ -163,6 +163,31 @@ var routes = {
     $(".alert").fadeOut();
     $("#content").html(templates.admin());
 
+
+
+    $("#save-btn").on("click", function() {
+      $.post("/admin/save")
+        .done(() => displayMessage("State Saved."))
+        .fail(res => doError(res.statusText));
+    });
+
+    $("#load-btn").on("click", function(e) {
+      var f = $("#loadstate")[0].files[0];
+      if (!f)
+        return;
+      var fd = new FormData();
+      fd.append("load", f);
+      $.ajax({
+        url: "/admin/load",
+        data: fd,
+        processData: false,
+        contentType: false,
+        type: 'POST'
+      }).done(() => displayMessage("State Loaded."))
+        .fail(res => displayError(res.responseText));
+    });
+
+
     $("#quit-btn").on("click", function() {
       $.post("/admin/quit")
         .done(() => displayMessage("WebSheet server terminated."))

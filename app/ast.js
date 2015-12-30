@@ -1,5 +1,6 @@
 "use strict";
 var _ = require("underscore");
+var cjson = require("./cjson");
 
 /* inspired by estree */
 
@@ -157,3 +158,5 @@ exports.Call = class Call extends Node {
   toString() { return `${this.name}(${this.args.map(k=>k.toString()).join(", ")})`; }
   children() { return this.args; }
 };
+
+_.each(exports, v => cjson.register(v));

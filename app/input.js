@@ -1,7 +1,7 @@
 "use strict";
 
 var wf = require("./wf");
-var json = require("./json");
+var cjson = require("./cjson");
 
 // not intended to be general-purpose
 Object.defineProperty(Object.prototype, "deepClone", { value:
@@ -41,7 +41,9 @@ class Table {
       throw "Invalid index";
     this.cells.splice(i, 1);
   }
+  static get _json() { return "InputTable"; }
 }
+cjson.register(Table);
 exports.Table = Table;
 
 function allowAll(tname, columns) {
@@ -76,10 +78,11 @@ class Expr {
     }
   }
 }
+cjson.register(Expr);
 exports.Expr = Expr;
 
 // var t = new Table({name: "hi", description: "qqq", owner: "me", columns: ["a", "b"]});
-// var jt = json.stringify(t.deepClone());
-// // console.log(jt);
-// var rt = json.parse(jt);
-// console.log(rt);
+// var jt = cjson.stringify(t.deepClone());
+// console.log(jt);
+// var rt = cjson.parse(jt);
+// console.log(rt.perms);

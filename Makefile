@@ -3,7 +3,7 @@ all:
 	jade -P static/index.jade
 
 watch:
-	nodemon server.js &
+	nodemon -- --harmony_destructuring server.js &
 	while true; do \
     inotifywait -e modify static/*.jade && \
     jade -P static/; \

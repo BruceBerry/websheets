@@ -9,24 +9,27 @@ var debug = require("express-debug");
 
 var fs = require("fs");
 var os = require("os");
+var process = require("process");
 var argParser = require('minimist');
 
-var WS = require("./app/websheets");
+var {WebSheet} = require("./app/websheets");
+var cjson = require("./app/cjson");
 
 var argv = argParser(process.argv.slice(2), {
   default: {
     port: 8000,
-    saveFile: os.homedir() + "/.websheets"
+    saveFile: os.homedir() + "/.websheets",
+    admin: true // always logged in as admin
   }
 });
 console.log("Listening on port", argv.port);
 
 var ws;
 if (fs.existsSync(argv.saveFile))
-  ws = WS.load(argv.saveFile);
+  ws = WebSheet.load(argv.saveFile);
 else {
   console.log("No savefile, starting from scratch");
-  ws = WS.create();
+  ws = new WebSheet();
 }
 
 
@@ -36,9 +39,7 @@ app.use(favicon("static/favicon.ico"));
 app.use(cookieParser());
 app.use(session({secret: "TODO", resave: false, saveUninitialized: true}));
 app.use(bodyParser.urlencoded({ extended: false }));
-app.use(bodyParser.json());
-// debug(app, { });
- 
+app.use(bodyParser.json()); 
 
 app.use("/static", express.static("static"));
 
@@ -47,13 +48,16 @@ app.get("/", function(req, res) {
 });
 
 var isUser = function(req, res, next) {
-  // TODO: check if user still exists?
+  if (argv.admin)
+    req.session.user = "admin";
   if (req.session.user)
     next();
   else
     res.status(403).end("Must be logged in");
 };
 var isAdmin = function(req, res, next) {
+  if (argv.admin)
+    req.session.user = "admin";
   isUser(req, res, function() {
     if (req.session.user === "admin")
       next();
@@ -61,8 +65,14 @@ var isAdmin = function(req, res, next) {
       res.status(403).end("Must be admin");
   });
 };
-
-// TODO: ensure all api requests are same origin
+var isOwnerOrAdmin = function(req, res, next) {
+  if (argv.admin)
+    req.session.user = "admin";
+  if (req.session.user === "admin" || req.session.user === ws.input[req.params.name].name)
+    next();
+  else
+    res.status(403).end("Must be owner of table or admin");
+};
 
 // 1. USER/AUTH
 app.post("/user/login", function(req, res) {
@@ -105,50 +115,55 @@ app.post("/debug/eval", isUser, function(req, res) {
   var result = ws.eval(req.session.user, req.body.code);
   res.end(result);
 });
+app.get("/debug/keywords", isUser, function(req, res) {
+  var result = ws.listKeywords();
+  res.json(result);
+});
 app.post("/admin/purge", isAdmin, function(req, res) {
   ws.purge();
   res.end();
 });
 app.post("/admin/reset", isAdmin, function(req, res) {
-  ws = WS.create();
+  ws = new WebSheet();
   res.end();
 });
 app.post("/admin/quit", isAdmin, function(req, res) {
   ws.save(argv.saveFile);
   res.end();
-  server.close();
+  process.exit(0);
 });
 app.post("/admin/load", isAdmin, upload.single("load"), function(req, res) {
   try {
-    ws = WS.load(req.file.path);
+    ws = WebSheet.load(req.file.path);
+    console.log("Successfully loaded state.");
     res.end();
   } finally {
     fs.unlink(req.file.path);
   }
 });
 app.post("/admin/save", isAdmin, function(req, res) {
-  ws.save(req.body.path || argv.safeFile);
+  ws.save(argv.saveFile);
   res.end();
 });
-app.post("/admin/download", isAdmin, function(req, res) {
-  var json = JSON.stringify(ws.toJSON());
+app.get("/admin/download", isAdmin, function(req, res) {
+  var json = cjson.stringify(ws);
   res.set('Content-Type', 'application/octet-stream');
   res.set('Content-Disposition', 'attachment;filename="ws.json"');
   res.send(json);
 });
 
-// 3. WS API
+// 3. Actual Websheet API
 app.get("/table/list", isUser, function(req,res) {
   res.json(ws.listTables());
 });
 
+app.get("/table/:name/input", isOwnerOrAdmin, function(req, res) {
+  res.json(ws.getInputTable(req.session.user, req.params.name));
+});
 app.get("/table/:name/output", isUser, function(req, res) {
-  res.json(ws.valueTable(req.session.user, req.params.name));
+  res.json(ws.getOutputTable(req.session.user, req.params.name));
 });
 
-app.get("/table/:name/input", isUser, function(req, res) {
-  res.json(ws.inputTable(req.session.user, req.params.name));
-});
 
 app.post("/table/import", isUser, upload.single("xls"), function(req, res) {
   try {
@@ -157,14 +172,6 @@ app.post("/table/import", isUser, upload.single("xls"), function(req, res) {
   } finally {
     fs.unlink(req.file.path);
   }
-});
-
-app.get("/table/:name/value", isUser, function(req, res) {
-  res.json(ws.valueTable(req.session.user, user, req.params.name));
-});
-
-app.get("/table/:name/expr", isUser, function(req, res) {
-  res.json(ws.exprTable(req.session.user, req.params.name));
 });
 
 var server = app.listen(argv.port);

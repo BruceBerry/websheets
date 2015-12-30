@@ -41,7 +41,7 @@ block content
         {{#if this.tables.length}}
           <ul>
           {{#each this.tables}}
-          <li><a href="#tables/{{this}}">{{this}}</a></li>
+          <li><a href="#tables/{{this}}/output">{{this}}</a></li>
           {{/each}}
           </ul>
         {{/if}}
@@ -53,15 +53,12 @@ block content
     <ul>
       {{#each this}}
       <li>
-        <b><a href="#tables/{{name}}">{{name}}</a></b>:
+        <b><a href="#table/{{name}}/output">{{name}}</a></b>
+        by {{owner}}:
         <small>{{description}}</small> - 
         <button data-table="{{name}}" class="btn btn-danger btn-xs btn-delete">Delete</button>
       </li>
       {{/each}}
-
-  +template#table-template.
-    <h1>{{name}}</h1>
-    <small>{{description}}<small>
 
   +template#home-template.
     <div class="jumbotron">
@@ -120,12 +117,18 @@ block content
     </form>
 
   +template#admin-template.
-    <h1>Admin Console</h1>
+    <h1>Admin Panel</h1>
     <small>Click the buttons below to execute privileged actions</small>
     <br/><br/>
+    <form class="form-inline" id="load-form">
+      <input class="form-control" type="file" id="loadstate">
+      <button type="submit" id="load-btn" class="btn btn-default">Load</button>
+    </form>
     <p>
       <div class="btn-group" role="group">
-      <button type="submit" id="purge-btn" class="btn btn-primary">Purge Cache</button>
+      <button type="submit" id="save-btn" class="btn btn-success">Save</button>
+      <a href="/admin/download" id="download-btn" class="btn btn-success" download>Download</a>
+      <button type="submit" id="purge-btn" class="btn btn-warning">Purge Cache</button>
       <button type="submit" id="reset-btn" class="btn btn-warning">Delete All</button>
       <button type="submit" id="quit-btn" class="btn btn-danger">Quit</button>
       </div>
