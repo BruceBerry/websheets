@@ -5,6 +5,7 @@ var _ = require("underscore");
 
 exports.Loc = class SourceLocation {
   constructor(jloc) { // jison location
+    debugger;
     this.cell = "undefined";
     this.start = jloc.first_column;
     this.end = jloc.last_column;

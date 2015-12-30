@@ -44,7 +44,6 @@ WebSheet.prototype = {
   listUsers: function() {
     return Object.keys(this.users);
   },
-
   listTables: function() {
     return _.map(this.tables, t => _.pick(t, "name", "description", "owner"));
   },

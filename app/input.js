@@ -1,6 +1,24 @@
 "use strict";
 
 var wf = require("./wf");
+var json = require("./json");
+
+// not intended to be general-purpose
+Object.defineProperty(Object.prototype, "deepClone", { value:
+  function() {
+    if (Array.isArray(this)) {
+      var arr = [];
+      this.forEach(x => arr.push(x ? x.deepClone() : x));
+      return arr;
+    } else if (typeof this === "object") {
+      var obj = Object.create(this.__proto__);
+      Object.keys(this).forEach(k => { obj[k] = this[k] ? this[k].deepClone() : this[k] });
+      return obj;
+    } else
+      return this;
+  }
+});
+
 
 class Table {
   constructor({name, description, owner, columns}) {
@@ -14,12 +32,12 @@ class Table {
   addRow(i) {
     if (i === undefined)
       i = this.cells.length;
-    if (i > this.cells.length)
+    if (i < 0 || i > this.cells.length)
       throw "Invalid index";
-    this.cells.splice(i, 0, this.perms.init); // TODO: deep cloning?
+    this.cells.splice(i, 0, this.perms.init.deepClone()); // TODO: deep cloning?
   }
   delRow(i) {
-    if (i >= this.cells.length)
+    if (i < 0 || i >= this.cells.length)
       throw "Invalid index";
     this.cells.splice(i, 1);
   }
@@ -51,11 +69,17 @@ class Expr {
     this.cell = cell;
     try {
       this.ast = wf.parseCell(src, cell);
+      this.error = null;
     } catch(e) {
       this.ast = null;
+      this.error = e;
     }
   }
 }
 exports.Expr = Expr;
 
-// console.log(new exports.Table({name: "hi", description: "qqq", owner: "me", columns: ["a", "b"]}).perms.read);
+// var t = new Table({name: "hi", description: "qqq", owner: "me", columns: ["a", "b"]});
+// var jt = json.stringify(t.deepClone());
+// // console.log(jt);
+// var rt = json.parse(jt);
+// console.log(rt);
