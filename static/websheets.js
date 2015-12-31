@@ -41,6 +41,21 @@ Handlebars.compile = function(...args) {
 Handlebars.registerHelper({
   pcode: function(code) {
     return highlight(cleanJunk(code));
+  },
+  ifError: function(expr) {
+    return expr.error ? "wf-error" : "";
+  },
+  eq: function (v1, v2) {
+        return v1 === v2;
+  },
+  neq: function (v1, v2) {
+      return v1 !== v2;
+  },
+  and: function (v1, v2) {
+      return v1 && v2;
+  },
+  or: function (v1, v2) {
+      return v1 || v2;
   }
 });
 
@@ -250,6 +265,8 @@ $(document).ready(function() {
    "import", "admin", "input"].forEach(
     n => templates[n] = Handlebars.compile($(`#${n}-template`).html())
   );
+  Handlebars.registerPartial('drop', templates.drop)
+
 
   // starts by figuring out if the user is logged in
   $.get("/user/whoami").done(function(u) {

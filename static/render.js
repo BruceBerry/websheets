@@ -7,41 +7,55 @@ function renderInputTable(table) {
   // possibly other values
   $("#content").html(templates.input({table}));
 
-  var sel = "td:not(.disabled)";
+  var pwf = src => highlight(cleanJunk(src));
+
+  var sel = "td:not(.disabled):not(.side-opt)";
   $(sel).on("mouseenter", function() {
-    console.log("start");
     var $this = $(this);
-    $this.data("prev", $this.html());
-    $this.html($this.data("src"));
+    if ($this.data("editing"))
+      return;
+    $("code", this).html($this.data("src"));
   });
   $(sel).on("mouseleave", function() {
     var $this = $(this);
-    if ($this.data("editing") || !this.data("prev"))
+    if ($this.data("editing"))
       return;
-    console.log("mrevert");
-    $this.html($this.data("prev"));
+    $this.html("<code contenteditable=\"true\">" + pwf($this.data("src")) + "</code>");
   });
-  // $("td").on("input", function() {
-  //   console.log("input");
-  // });
   $(sel).on("keydown", function(e) {
     var $this = $(this);
     if (e.which == 13) {
       e.preventDefault();
-      console.log("committing " + $("code", this).html());
+      var body = {
+        src: $("code", this).html(),
+        perm: $this.parent().data("perm"),
+        row: $this.parent().data("row"),
+        column: $this.data("col")
+      };
       $this.data("editing", false);
-      // TODO: send to server
-      $this.html($this.data("prev"));    
-      return;
+      $.post(`/table/${table.name}/edit`, body)
+        .done(() => routes.inputTable(table.name))
+        .fail(function(res) {
+          displayError(res.responseText);
+          $this.data("editing", false);
+          $this.trigger("blur");
+          $this.trigger("mouseleave");          
+        });
     } else if (e.which == 27) {
       e.preventDefault();
-      console.log("revert");
       $this.data("editing", false);
-      $this.html($this.data("prev"));
-      return;
+      $this.trigger("blur");
+      $this.trigger("mouseleave");
+    } else if (!$this.data("editing")) {
+      $this.data("editing", true);
+      var width = $this.css("width");
+      // TODO: when should it get unstuck?
+      $this.css("max-width", width);
+      $this.css("min-width", width);
+      $this.css("width", width);
     }
-    $this.data("editing", true);
-  })
+
+  });
 }
 
 function renderOutputTable(table) {

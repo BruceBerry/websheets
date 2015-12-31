@@ -12,6 +12,7 @@ class WebSheet {
     this.input = {};
     this.output = {values:{}, permissions:{}};
     this.createTable("admin", "prova", "here", ["a", "bb", "ab"]);
+    this.input.prova.addRow("admin");
   }
 
   save(path) {
@@ -44,6 +45,9 @@ class WebSheet {
       return {user: u.user, tables: _.chain(this.input).where({owner: u.user}).pluck("name").value()};
     });
   }
+  purge() {
+    this.output = {values:{}, permissions: {}};
+  }
 
   listTables() {
     // [publicTable]
@@ -64,7 +68,7 @@ class WebSheet {
 
   getInputTable(name) {
     // TODO: clean AST info
-    return cjson.stringify(this.input[name]);
+    return cjson.stringify(this.input[name].export());
   }
 }
 cjson.register(WebSheet);

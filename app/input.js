@@ -1,5 +1,7 @@
 "use strict";
 
+var _ = require("underscore");
+
 var wf = require("./wf");
 var cjson = require("./cjson");
 
@@ -29,12 +31,14 @@ class Table {
     this.perms = allowAll(name, columns);
     this.cells = [];
   }
-  addRow(i) {
+  addRow(user, i) {
     if (i === undefined)
       i = this.cells.length;
     if (i < 0 || i > this.cells.length)
       throw "Invalid index";
-    this.cells.splice(i, 0, this.perms.init.deepClone()); // TODO: deep cloning?
+    var newRow = this.perms.init.deepClone();
+    newRow._owner = user;
+    this.cells.splice(i, 0, newRow); // TODO: deep cloning?
   }
   delRow(i) {
     if (i < 0 || i >= this.cells.length)
@@ -42,6 +46,33 @@ class Table {
     this.cells.splice(i, 1);
   }
   static get _json() { return "InputTable"; }
+  export() {
+    // makes copy and removes ast stuff
+    return {
+      name: this.name,
+      description: this.description,
+      owner: this.owner,
+      columns: this.columns,
+      perms: _.mapObject(this.perms,
+        p => _.mapObject(p,
+          c => {
+            var nc = c.deepClone();
+            delete nc.ast;
+            return nc;
+          }
+        )
+      ),
+      cells: _.mapObject(this.cells,
+        r => _.mapObject(r,
+          c => {
+            var nc = c.deepClone();
+            delete nc.ast;
+            return nc;
+          }
+        )
+      )
+    };
+  }
 }
 cjson.register(Table);
 exports.Table = Table;
@@ -51,18 +82,18 @@ function allowAll(tname, columns) {
   ["read", "write", "init"].forEach(function(p) {
     ret[p] = {};
     columns.forEach(function(c) {
-      ret[p][c] = allow(tname, c, p);
+      ret[p][c] = allow(tname, p, c);
     });
     if (p !== "init")
-      ret[p].row = allow(tname, "row", p);
+      ret[p].row = allow(tname, p, "row");
   });
-  ret.add = allow(tname, "row", "add");
-  ret.del = allow(tname, "row", "del");
+  ret.add = {row: allow(tname, "add", "row") };
+  ret.del = {row: allow(tname, "del", "row") };
   return ret;
 }
 
-function allow(tname, cname, type) {
-  return new Expr("", `${tname}.${cname}.${type}`);
+function allow(tname, type, cname) {
+  return new Expr("", `${tname}.${type}.${cname}`);
 }
 
 class Expr {

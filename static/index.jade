@@ -171,23 +171,23 @@ block content
         </tr>
       </thead>
       <tbody>
-        <tr data-type="read">
+        <tr data-perm="read">
           <th>Read</th>
           {{#each table.perms.read}}
-          <td class="editable" data-col="{{@key}}" data-row="{{this.src}}">
-            <code contenteditable="true">b<span>i{{pcode this.src}}</span>e</code>
+          <td class="editable {{ifError this}}" data-col="{{@key}}" data-src="{{this.src}}">
+            <code contenteditable="true">{{pcode this.src}}</code>
           </td>
           {{/each}}
         </tr>
-        <tr data-type="write">
+        <tr data-perm="write">
           <th>Write</th>
           {{#each table.perms.write}}
-          <td class="editable" data-col="{{@key}}" data-row="{{this.src}}">
+          <td class="editable" data-col="{{@key}}" data-src="{{this.src}}">
             <code>{{pcode this.src}}</code>
           </td>
           {{/each}}
         </tr>
-        <tr data-type="init">
+        <tr data-perm="init">
           <th>Init</th>
           {{#each table.perms.init}}
           <td class="editable" data-col="{{@key}}" data-src="{{this.src}}">
@@ -196,22 +196,22 @@ block content
           {{/each}}
           <td class="disabled"></td>
         </tr>
-        <tr data-type="add">
+        <tr data-perm="add">
           <th>Add Row</th>
           {{#each table.columns}}
           <td class="disabled"></td>
           {{/each}}
-          <td class="editable" data-col="row" data-src="{{table.perms.add.src}}">
-            <code>{{pcode table.perms.add.src}}</code>
+          <td class="editable" data-col="row" data-src="{{table.perms.add.row.src}}">
+            <code>{{pcode table.perms.add.row.src}}</code>
           </td>          
         </tr>
-        <tr data-type="del">
+        <tr data-perm="del">
           <th>Add Row</th>
           {{#each table.columns}}
           <td class="disabled"></td>
           {{/each}}
-          <td class="editable" data-col="row" data-src="{{table.perms.del.src}}">
-            <code>{{pcode table.perms.del.src}}</code>
+          <td class="editable" data-col="row" data-src="{{table.perms.del.row.src}}">
+            <code>{{pcode table.perms.del.row.src}}</code>
           </td>          
         </tr>
       </tbody>
@@ -222,6 +222,7 @@ block content
     <table class='table table-condensed table-bordered table-striped table-hover'>
       <thead>
         <tr>
+          <th class="side-opt"></th>
           <th>_owner</th>
           {{#each table.columns}}
           <th>{{this}}</th>
@@ -231,11 +232,16 @@ block content
       <tbody>
         {{#each table.cells}}
         <tr data-row="{{@index}}">
-          <td class="editable" data-col="_owner">{{this.owner}}</td>
+          <td class="side-opt">{{> drop}}</td>
+          <td class="editable" data-col="_owner" data-src="{{this._owner}}">{{this._owner}}</td>
           {{#each this}}
-          <td class="editable" data-col="{{@key}}"><code>{{pcode this.src}}</code></td>
+          {{#if (neq this.src undefined)}}
+          <td class="editable" data-col="{{@key}}" data-src="{{this.src}}"><code>{{this.src}}</code></td>
+          {{/if}}
           {{/each}}
         </tr>
         {{/each}}
       </tbody>
     </table>
+
+    <p><button id='add-row' class='button'>Add Row</button></p>

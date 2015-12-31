@@ -65,6 +65,10 @@ code .func {
   font-weight: bold;
 }
 
+.wf-error {
+  background-color: #FED7D9;
+}
+
 .invisible {
   display: none;
 }

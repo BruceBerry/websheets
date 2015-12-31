@@ -13,6 +13,7 @@ var process = require("process");
 var argParser = require('minimist');
 
 var {WebSheet} = require("./app/websheets");
+var i = require("./app/input");
 var cjson = require("./app/cjson");
 
 var argv = argParser(process.argv.slice(2), {
@@ -182,6 +183,29 @@ app.get("/table/:name/input", isOwnerOrAdmin, function(req, res) {
 app.get("/table/:name/output", isUser, function(req, res) {
   res.json(ws.getOutputTable(req.session.user, req.params.name));
 });
+app.post("/table/:name/edit", isUser, function(req, res) {
+  var name = req.params.name;
+  var {perm, column, src, row} = req.body;
+  row = Number(row);
+  // double as both privileged and normal cell editing
+  if (perm) {
+    isOwnerOrAdmin(req, res, function() {
+      ws.input[name].perms[perm][column] =
+        new i.Expr(src, `${name}.${perm}.${column}`);
+      ws.purge();
+      res.end();
+    });
+  } else if (column === "_owner") {
+    isAdmin(req, res, function () {
+      ws.input[name].cells[row][column] = src;
+      ws.purge();
+      res.end();
+    });
+  } else {
+    ws.writeCell(req.session.user, name, row, column, src);
+    res.end();
+  }
+});
 
 
 app.post("/table/import", isUser, upload.single("xls"), function(req, res) {
@@ -193,4 +217,4 @@ app.post("/table/import", isUser, upload.single("xls"), function(req, res) {
   }
 });
 
-var server = app.listen(argv.port);
+var server = app.listen(argv.port, "localhost");
