@@ -175,7 +175,7 @@ block content
           <th>Read</th>
           {{#each table.perms.read}}
           <td class="editable" data-col="{{@key}}" data-row="{{this.src}}">
-            <code>{{pcode this.src}}</code>
+            <code contenteditable="true">b<span>i{{pcode this.src}}</span>e</code>
           </td>
           {{/each}}
         </tr>

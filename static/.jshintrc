@@ -3,6 +3,12 @@
   "esnext": true,
   "browser": true,
   "globals": {
-    "routie": true
+    "routie": true,
+    "routes": true,
+    "templates": true,
+    "renderInputTable": true,
+    "renderOutputTable": true,
+    "keywords": true,
+    "config": true
   }
 }

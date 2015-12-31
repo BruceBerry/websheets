@@ -1,3 +1,4 @@
+"use strict";
 
 function renderInputTable(table) {
   document.title = `${table.name} - Input View`;
@@ -5,6 +6,42 @@ function renderInputTable(table) {
   // TODO: when I do "each" on the row i need to hide the _owner and
   // possibly other values
   $("#content").html(templates.input({table}));
+
+  var sel = "td:not(.disabled)";
+  $(sel).on("mouseenter", function() {
+    console.log("start");
+    var $this = $(this);
+    $this.data("prev", $this.html());
+    $this.html($this.data("src"));
+  });
+  $(sel).on("mouseleave", function() {
+    var $this = $(this);
+    if ($this.data("editing") || !this.data("prev"))
+      return;
+    console.log("mrevert");
+    $this.html($this.data("prev"));
+  });
+  // $("td").on("input", function() {
+  //   console.log("input");
+  // });
+  $(sel).on("keydown", function(e) {
+    var $this = $(this);
+    if (e.which == 13) {
+      e.preventDefault();
+      console.log("committing " + $("code", this).html());
+      $this.data("editing", false);
+      // TODO: send to server
+      $this.html($this.data("prev"));    
+      return;
+    } else if (e.which == 27) {
+      e.preventDefault();
+      console.log("revert");
+      $this.data("editing", false);
+      $this.html($this.data("prev"));
+      return;
+    }
+    $this.data("editing", true);
+  })
 }
 
 function renderOutputTable(table) {
@@ -159,5 +196,6 @@ function highlight(wf) {
     wf = wf.replace(keywords.re_columns, "<span class=\"column\">$&</span>");
   if (keywords.re_functions)
     wf = wf.replace(keywords.re_functions, "<span class=\"func\">$&</span>");
+  wf = wf.replace("aa", "<span class=\"func\">aa</span>");
   return wf;
 }
