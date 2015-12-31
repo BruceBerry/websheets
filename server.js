@@ -68,10 +68,15 @@ var isAdmin = function(req, res, next) {
 var isOwnerOrAdmin = function(req, res, next) {
   if (argv.admin)
     req.session.user = "admin";
-  if (req.session.user === "admin" || req.session.user === ws.input[req.params.name].name)
-    next();
-  else
-    res.status(403).end("Must be owner of table or admin");
+
+  isUser(req, res, function() {
+    if (!ws.input[req.params.name])
+      res.status(403).end("Table does not exist");
+    else if (req.session.user === "admin" || req.session.user === ws.input[req.params.name].owner)
+      next();
+    else
+      res.status(403).end("Must be owner of table or admin");
+  });
 };
 
 // 1. USER/AUTH
@@ -156,9 +161,23 @@ app.get("/admin/download", isAdmin, function(req, res) {
 app.get("/table/list", isUser, function(req,res) {
   res.json(ws.listTables());
 });
+app.post("/table/create", isUser, function(req,res) {
+  debugger;
+  if (ws.input[req.body.name])
+    res.status(403).end("Table already exists");
+  else
+    ws.createTable(req.session.user,
+      req.body.name, req.body.description,
+      req.body.columns.split(",").map(s=>s.trim()));
+    res.end();
+});
+app.post("/table/:name/delete", isOwnerOrAdmin, function(req, res) {
+  delete ws.input[req.params.name];
+  res.end();
+});
 
 app.get("/table/:name/input", isOwnerOrAdmin, function(req, res) {
-  res.json(ws.getInputTable(req.session.user, req.params.name));
+  res.type("json").end(ws.getInputTable(req.params.name));
 });
 app.get("/table/:name/output", isUser, function(req, res) {
   res.json(ws.getOutputTable(req.session.user, req.params.name));

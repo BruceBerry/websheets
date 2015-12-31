@@ -21,7 +21,7 @@ Object.defineProperty(Object.prototype, "deepClone", { value:
 
 
 class Table {
-  constructor({name, description, owner, columns}) {
+  constructor(name, description, owner, columns) {
     this.name = name;
     this.description = description;
     this.owner = owner;
@@ -81,7 +81,7 @@ class Expr {
 cjson.register(Expr);
 exports.Expr = Expr;
 
-// var t = new Table({name: "hi", description: "qqq", owner: "me", columns: ["a", "b"]});
+// var t = new Table("hi", "qqq", "me", ["a", "b"]});
 // var jt = cjson.stringify(t.deepClone());
 // console.log(jt);
 // var rt = cjson.parse(jt);

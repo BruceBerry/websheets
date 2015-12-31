@@ -4,6 +4,22 @@
 var user = null;
 // handlebar templates
 var templates = {};
+// current set of tables and column names
+var keywords = {};
+var updateKeywords = function() {
+  $.get("/debug/keywords")
+    .done(function(kw) {
+      keywords = kw;
+      if (keywords.tables.length > 0)
+        keywords.re_tables = new RegExp("\\b(" + keywords.tables.join("|") + ")\\b", "g");
+      if (keywords.columns.length > 0)
+        keywords.re_columns = new RegExp("\\b(" + keywords.columns.join("|") + ")\\b", "g");
+      if (keywords.functions.length > 0)
+        keywords.re_functions = new RegExp("\\b(" + keywords.functions.join("|") + ")\\b", "g");
+    })
+    .fail(() => console.log("Keywords currently unavailable"));
+}
+updateKeywords();
 
 var config = {
   clean: false,
@@ -88,45 +104,54 @@ function updateLoginDom() {
 
 var routes = {
   userList: function() {
+    document.title = "Users";
     $(".alert").fadeOut();
     $.getJSON("/user/list", function(users) {
       $("#content").html(templates.users(users));
     });
   },
   tableList: function() {
+    document.title = "Tables";
     $(".alert").fadeOut();
     $.getJSON("/table/list", function(tables) {
       $("#content").html(templates.tables(tables));
       $(".btn-delete").on("click", function() {
         var name = $(this).data("table");
-        $.ajax(`tables/${name}`, {
-          method: "DELETE"
-        }).done(routes.tableList)
-          .fail(res => doError(res.responseText));
+        $.post(`/table/${name}/delete`).done(routes.tableList)
+          .fail(res => displayError(res.responseText));
+      });
+      $("#table-create-button").click(function() {
+        $.post("/table/create", $("#table-create-form").serialize())
+          .done(function() {
+            routes.tableList();
+          })
+          .fail(function(res) {
+            displayError(res.responseText)
+          });
       });
     });
   },
-  valueTable: function(name) {
+  outputTable: function(name) {
     $(".alert").fadeOut();
-    $.getJSON(`/table/${name}/value`)
+    $.getJSON(`/table/${name}/output`)
       .done(renderOutputTable)
       .fail(function(res) {
         displayError(res.responseText);
     });
   },
-  exprTable: function(name) {
+  inputTable: function(name) {
     $(".alert").fadeOut();
-    $.getJSON(`/table/${name}/expr`)
+    $.getJSON(`/table/${name}/input`)
       .done(renderInputTable)
-      .fail(function(res) {
-        displayError(res.responseText);
-    });
+      .fail(res => displayError(res.responseText));
   },
   home: function() {
+    document.title = "Home";
     $(".alert").fadeOut();
     $("#content").html(templates.home());
   },
   eval: function() {
+    document.title = "Eval Console";
     $(".alert").fadeOut();
     $("#content").html(templates.eval());
 
@@ -197,13 +222,13 @@ var routes = {
     $("#purge-btn").on("click", function() {
       $.post("/admin/purge")
         .done(() => displayMessage("Cache Purged."))
-        .fail(res => doError(res.statusText));
+        .fail(res => displayError(res.responseText));
     });
 
     $("#reset-btn").on("click", function() {
       $.post("/admin/reset")
-        .done(() => doMessage("All tables and users (except for admin) have been deleted."))
-        .fail(res => doError(res.statusText));
+        .done(() => displayMessage("All tables and users (except for admin) have been deleted."))
+        .fail(res => displayError(res.responseText));
     });
 
     // TODO: load, save and download
@@ -239,9 +264,9 @@ $(document).ready(function() {
     // start routing location.hash
     routie({
       "users": routes.userList,
-      "tables": routes.tableList,
-      "tables/:name": routes.valueTable,
-      "tables/:name/edit": routes.exprTable,
+      "table/list": routes.tableList,
+      "table/:name/output": routes.outputTable,
+      "table/:name/input": routes.inputTable,
       "eval": routes.eval,
       "import": routes.import,
       "admin": routes.admin,

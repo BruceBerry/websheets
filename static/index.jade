@@ -41,7 +41,7 @@ block content
         {{#if this.tables.length}}
           <ul>
           {{#each this.tables}}
-          <li><a href="#tables/{{this}}/output">{{this}}</a></li>
+          <li><a href="#table/{{this}}/output">{{this}}</a></li>
           {{/each}}
           </ul>
         {{/if}}
@@ -59,6 +59,25 @@ block content
         <button data-table="{{name}}" class="btn btn-danger btn-xs btn-delete">Delete</button>
       </li>
       {{/each}}
+    </ul>
+    <h3>Create New Table</h3>
+    <div class="col-md-6">
+      <form id="table-create-form">
+        <div class="form-group">
+          <label for="name">Name</label>
+          <input type="text" class="form-control" name="name" placeholder="Name">
+        </div>
+        <div class="form-group">
+          <label for="description">Description</label>
+          <textarea class="form-control" name="description" placeholder="Description" rows="3"></textarea>
+        </div>
+        <div class="form-group">
+          <label for="columns">Columns</label>
+          <input type="text" class="form-control" name="columns" placeholder="Comma-separated column list">
+        </div>
+        <button id="table-create-button" class="btn btn-primary" type="button">Create</button>
+      </form>
+    </div>
 
   +template#home-template.
     <div class="jumbotron">
@@ -135,36 +154,88 @@ block content
     </p>
 
   +template#input-template.
-    <h1>{{table.name}} - Expression View</h1>
+    <h1>
+      {{table.name}} <small>by {{table.owner}}</small> (Input View)
+      <a class="pull-right btn btn-default" href="#table/{{table.name}}/output">Switch to Output View</a>
+    </h1>
     <p>{{table.description}}</p>
-    <p><a class="btn btn-default" href="#tables/{{table.name}}">Switch to Value View</a></p>
-    <p>Table perm: {{{pcode table.tperm.read.input}}}/{{{pcode table.tperm.write.input}}}</p>
     <h2>Permissions</h2>
-    <table class='table table-bordered table-hover'>
+    <table class='table table-condensed table-striped table-bordered table-hover'>
       <thead>
         <tr>
           <th></th>
-          {{#each table.colnames}}
+          {{#each table.columns}}
           <th>{{this}}</th>
           {{/each}}
           <th>All Columns</th>
         </tr>
       </thead>
       <tbody>
-        <tr>
+        <tr data-type="read">
           <th>Read</th>
-          {{#each table.colperms}}
-          <td><code>{{{pcode read.input}}}</code></td>
+          {{#each table.perms.read}}
+          <td class="editable" data-col="{{@key}}" data-row="{{this.src}}">
+            <code>{{pcode this.src}}</code>
+          </td>
           {{/each}}
-          <td><code>{{{pcode table.rowperm.read.input}}}</code></td>
         </tr>
-        <tr>
+        <tr data-type="write">
           <th>Write</th>
-          {{#each table.colperms}}
-          <td><code>{{{pcode write.input}}}</code></td>
+          {{#each table.perms.write}}
+          <td class="editable" data-col="{{@key}}" data-row="{{this.src}}">
+            <code>{{pcode this.src}}</code>
+          </td>
           {{/each}}
-          <td><code>{{{pcode table.rowperm.write.input}}}</code></td>
+        </tr>
+        <tr data-type="init">
+          <th>Init</th>
+          {{#each table.perms.init}}
+          <td class="editable" data-col="{{@key}}" data-src="{{this.src}}">
+            <code>{{pcode this.src}}</code>
+          </td>
+          {{/each}}
+          <td class="disabled"></td>
+        </tr>
+        <tr data-type="add">
+          <th>Add Row</th>
+          {{#each table.columns}}
+          <td class="disabled"></td>
+          {{/each}}
+          <td class="editable" data-col="row" data-src="{{table.perms.add.src}}">
+            <code>{{pcode table.perms.add.src}}</code>
+          </td>          
+        </tr>
+        <tr data-type="del">
+          <th>Add Row</th>
+          {{#each table.columns}}
+          <td class="disabled"></td>
+          {{/each}}
+          <td class="editable" data-col="row" data-src="{{table.perms.del.src}}">
+            <code>{{pcode table.perms.del.src}}</code>
+          </td>          
         </tr>
       </tbody>
     </table>
 
+    <h2>Data</h2>
+
+    <table class='table table-condensed table-bordered table-striped table-hover'>
+      <thead>
+        <tr>
+          <th>_owner</th>
+          {{#each table.columns}}
+          <th>{{this}}</th>
+          {{/each}}
+        </tr>
+      </thead>
+      <tbody>
+        {{#each table.cells}}
+        <tr data-row="{{@index}}">
+          <td class="editable" data-col="_owner">{{this.owner}}</td>
+          {{#each this}}
+          <td class="editable" data-col="{{@key}}"><code>{{pcode this.src}}</code></td>
+          {{/each}}
+        </tr>
+        {{/each}}
+      </tbody>
+    </table>

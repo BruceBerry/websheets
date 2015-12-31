@@ -1,67 +1,10 @@
 
 function renderInputTable(table) {
-
-  document.title = `${table.name} - Expression View`;
-
-  var pe = s => highlight(cleanJunk(s));
-
-  var result = "";
-  result += `<h1>${table.name} - Expression View</h1><p>${table.description}</p>`;
-  result += `<p><a class="btn btn-default" href="#tables/${table.name}">Switch to Value View</a></p>`;
-  // TODO: table perm
-  // result += `<p>Table perm: ${pe(table.tperm.read.input)}/${pe(table.tperm.write.input)}</p>`;
-  result += "<h2>Permissions</h2>";
-  result += "<table class='table table-bordered table-hover'><thead><tr><td></td>";
-  table.colnames.forEach(c => { result += `<th>${c}</th>`; });
-  result += "<th>All Columns</th>";
-  result += "</tr></thead><tbody>";
-  // Read
-  result += "<tr><th>Read</th>";
-  table.colperms.map(rw => rw.read).forEach(p => { result += `<td><code>${pe(p.input)}</code></td>`; });
-  result += `<td><code>${pe(table.rowperm.read.input)}</code></td>`;
-  result += "</tr>";
-   // "Write", "Init", "Val", "Add", "Del"]
-  result += "<tr><th>Write</th>";
-  table.colperms.map(rw => rw.write).forEach(p => { result += `<td><code>${pe(p.input)}</code></td>`; });
-  result += `<td><code>${pe(table.rowperm.write.input)}</code></td>`;
-  result += "</tr>";
-
-  result += "<tr><th>Init</th>";
-  table.initvalues.forEach(e => { result += `<td><code>${pe(e.input)}</code></td>`; });
-  result += "<td class='disabled'></td>";
-  result += "</tr>";
-  
-  result += "<tr><th>Valid</th>";
-  table.validchecks.forEach((e) => { result += `<td><code>${pe(e.input)}</code></td>`; });
-  result += `<td class="disabled"></td>`;
-  result += "</tr>";
-
-  result += "<tr><th>Add Row</th>";
-  // table.colnames.forEach(() => { result += "<td class='disabled'></td>" });
-  result += `<td colspan="${table.colnames.length+1}"><code>${pe(table.addperm.input)}</code></td>`;
-  result += "</tr>";
-  
-  result += "<tr><th>Del Row</th>";
-  // table.colnames.forEach(() => { result += "<td class='disabled'></td>" });
-  result += `<td colspan="${table.colnames.length+1}"><code>${pe(table.delperm.input)}</code></td>`;
-  result += "</tr>";
-  
-  result += "</tbody></table><h2>Data</h2>";
-
-  result += "<table class='table table-bordered table-striped table-hover'><thead><tr><th>_owner</th>";
-  table.colnames.forEach(c => { result += `<th>${c}</th>`; });
-  result += "</thead><tbody>";
-  table.rows.forEach(function(row) {
-    result += `<tr><td>${row.owner}</td>`;
-    row.cells.forEach(cell => result += `<td><code>${pe(cell.expr.input)}</code></td>`);
-    result += "</tr>";
-  });
-
-  result += "</tbody></table>";
-  $("#content").html(result);
-
-  // $("#content").html(templates.input({table}));
-
+  document.title = `${table.name} - Input View`;
+  // TODO: editing
+  // TODO: when I do "each" on the row i need to hide the _owner and
+  // possibly other values
+  $("#content").html(templates.input({table}));
 }
 
 function renderOutputTable(table) {
@@ -103,7 +46,7 @@ function renderOutputTable(table) {
   $("table td.cell").on("dblclick", function(e) {
     var $this = $(this);
     if($(this).find('input').is(':focus'))
-      return; // TODO: do we need this check at all?
+      return; // wut
     var prev = $(this).html();
     var val = $("code", $this).text();
 
@@ -204,20 +147,17 @@ function cleanJunk(wf) {
   return wf;
 }
 
-// TODO: make it smart by supplying table, column names and functions
 function highlight(wf) {
   if (!config.highlight) {
     return wf;
   }
-  wf = wf.replace(/\b(in|not|True|False)\b/g, "<span class=\"keyword\">$&</span>");
+  wf = wf.replace(/\b(in|not|if|then|else|when|null|true|false)\b/g, "<span class=\"keyword\">$&</span>");
   wf = wf.replace(/\b(owner|row|user|this|val|newVal)\b/g, "<span class=\"env\">$&</span>");
-  wf = wf.replace(/\b(AVG)\b/g, "<span class=\"func\">$&</span>");
-  wf = wf.replace(/\b(Task|Event|Response|Applicant|Faculty|Review)\b/g, "<span class=\"tname\">$&</span>");
-  wf = wf.replace(/\b(Author|Name|Completed|Shared|Public|Invitees|Attendees|User|EName|Coming|Conflicts|AppReviews|Average|AppName|Grade)\b/g,
-    "<span class=\"column\">$&</span>");
-
+  if (keywords.re_tables)
+    wf = wf.replace(keywords.re_tables, "<span class=\"tname\">$&</span>");  
+  if (keywords.re_columns)
+    wf = wf.replace(keywords.re_columns, "<span class=\"column\">$&</span>");
+  if (keywords.re_functions)
+    wf = wf.replace(keywords.re_functions, "<span class=\"func\">$&</span>");
   return wf;
 }
-
-// TODO: do not use admin/admin2, etc
-// TODO: dismiss alerts quicker/easily

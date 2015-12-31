@@ -11,6 +11,7 @@ class WebSheet {
     this.users = {admin: {user: "admin", pass: "pass"}};
     this.input = {};
     this.output = {values:{}, permissions:{}};
+    this.createTable("admin", "prova", "here", ["a", "bb", "ab"]);
   }
 
   save(path) {
@@ -56,9 +57,14 @@ class WebSheet {
       functions: [] // TODO
     };
   }
+  createTable(user, name, desc, columns) {
+    this.input[name] = new i.Table(name, desc, user, columns);
+    return true;
+  }
 
-  getInputTable(user) {
-
+  getInputTable(name) {
+    // TODO: clean AST info
+    return cjson.stringify(this.input[name]);
   }
 }
 cjson.register(WebSheet);

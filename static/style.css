@@ -68,3 +68,8 @@ code .func {
 .invisible {
   display: none;
 }
+
+
+td.editable {
+    cursor: text;
+}
