@@ -65,10 +65,22 @@ class WebSheet {
     this.input[name] = new i.Table(name, desc, user, columns);
     return true;
   }
-
   getInputTable(name) {
-    // TODO: clean AST info
+    // server performed access control
     return cjson.stringify(this.input[name].export());
+  }
+  addRow(user, name, row) {
+    // TODO: evaluate add row permission
+    this.input[name].addRow(user, row);
+  }
+  deleteRow(user, name, row) {
+    // TODO: evaluate del row permission
+    this.input[name].deleteRow(user, row);
+  }
+  writeCell(user, name, row, column, src) {
+    // TODO: evaluate write permission (add newVal and oldVal to env)
+    // TODO: maybe update ownership if cells have owners?
+    this.input[name].writeCell(row, column, src);
   }
 }
 cjson.register(WebSheet);

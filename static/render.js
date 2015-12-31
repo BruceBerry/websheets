@@ -49,13 +49,40 @@ function renderInputTable(table) {
     } else if (!$this.data("editing")) {
       $this.data("editing", true);
       var width = $this.css("width");
-      // TODO: when should it get unstuck?
       $this.css("max-width", width);
       $this.css("min-width", width);
       $this.css("width", width);
     }
 
   });
+
+  $("#add-row").on("click", function() {
+    $.post(`/table/${table.name}/addrow`)
+      .done(() => routes.inputTable(table.name))
+      .fail(res => displayError(res.responseText));
+  });
+
+  $(".row-insert-before,.row-insert-after").on("click", function() {
+    var $this = $(this);
+    var index = $this.parents("[data-row]").data("row");
+    if ($this.attr("class") === "row-insert-after")
+      index++;
+    debugger;
+    $.post(`/table/${table.name}/addrow`, {row: index})
+      .done(() => routes.inputTable(table.name))
+      .fail(res => displayError(res.responseText));
+  });
+
+  $(".row-delete").on("click", function() {
+    var $this = $(this);
+    var index = $this.parents("[data-row]").data("row");
+    var index = $this.data("index");
+    $.post(`/table/${table.name}/deleterow`, {row: index})
+      .done(() => routes.inputTable(table.name))
+      .fail(res => displayError(res.responseText));
+  });
+
+
 }
 
 function renderOutputTable(table) {

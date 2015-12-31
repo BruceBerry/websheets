@@ -37,13 +37,22 @@ class Table {
     if (i < 0 || i > this.cells.length)
       throw "Invalid index";
     var newRow = this.perms.init.deepClone();
+    // TODO: update row cell coordinates
     newRow._owner = user;
-    this.cells.splice(i, 0, newRow); // TODO: deep cloning?
+    this.cells.splice(i, 0, newRow);
   }
   delRow(i) {
     if (i < 0 || i >= this.cells.length)
       throw "Invalid index";
     this.cells.splice(i, 1);
+  }
+  writeCell(row, col, src) {
+    if (this.columns.indexOf(col) === -1)
+      throw "Invalid Column";
+    if (row < 0 || row >= this.cells.length)
+      throw "Invalid Row";
+    var oldCell = this.cells[row].col;
+    this.cells[row].col = new Expr(src, oldCell.cell);
   }
   static get _json() { return "InputTable"; }
   export() {
@@ -101,10 +110,11 @@ class Expr {
     this.src = src;
     this.cell = cell;
     try {
-      this.ast = wf.parseCell(src, cell);
       this.error = null;
+      this.ast = wf.parseCell(src, cell);
     } catch(e) {
       this.ast = null;
+      debugger;
       this.error = e;
     }
   }

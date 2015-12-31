@@ -119,11 +119,11 @@ block content
     <span class="dropdown">
       <span data-toggle="dropdown" class="dropdown caret"></span>
       <ul class="dropdown-menu">
-        <!-- <li class="dropdown-header">Row Owner: {{row.owner}}</li>
+        <!-- <li class="dropdown-header">Row Owner: {{this._owner}}</li>
              <li role="separator" class="divider"></li> -->
-        <li><a class="row-insert-before" data-index={{row.index}}>Insert Row Before</a></li>
-        <li><a class="row-insert-after" data-index={{row.index}}>Insert Row After</a></li>
-        <li><a class="row-delete" data-index={{row.index}}>Delete Row</a></li>
+        <li><a class="row-insert-before">Insert Row Before</a></li>
+        <li><a class="row-insert-after">Insert Row After</a></li>
+        <li><a class="row-delete">Delete Row</a></li>
       </ul>
     </span>
 
@@ -233,7 +233,7 @@ block content
         {{#each table.cells}}
         <tr data-row="{{@index}}">
           <td class="side-opt">{{> drop}}</td>
-          <td class="editable" data-col="_owner" data-src="{{this._owner}}">{{this._owner}}</td>
+          <td class="editable" data-col="_owner" data-src="{{this._owner}}"><code>{{this._owner}}</code></td>
           {{#each this}}
           {{#if (neq this.src undefined)}}
           <td class="editable" data-col="{{@key}}" data-src="{{this.src}}"><code>{{this.src}}</code></td>

@@ -163,7 +163,6 @@ app.get("/table/list", isUser, function(req,res) {
   res.json(ws.listTables());
 });
 app.post("/table/create", isUser, function(req,res) {
-  debugger;
   if (ws.input[req.body.name])
     res.status(403).end("Table already exists");
   else
@@ -205,6 +204,14 @@ app.post("/table/:name/edit", isUser, function(req, res) {
     ws.writeCell(req.session.user, name, row, column, src);
     res.end();
   }
+});
+app.post("/table/:name/addrow", isUser, function(req, res) {
+  ws.addRow(req.session.user, req.params.name, req.body.row);
+  res.end();
+});
+app.post("/table/:name/deleterow", isUser, function(req, res) {
+  ws.deleteRow(req.session.user, req.params.name, req.body.row);
+  res.end();
 });
 
 

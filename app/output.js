@@ -3,8 +3,12 @@ var i = require("./input");
 var cjson = require("./cjson");
 
 class Table {
+  constructor(guard) {
+    if (guard != 12345)
+      throw "Use static method";
+  }
   static fromInputTable(it) {
-    var ot = new Table();
+    var ot = new Table(12345);
     ot.name = it.name;
     ot.description = it.description;
     ot.owner = it.owner;

@@ -145,12 +145,7 @@ for_els: ID 'in' expr { $$ = {}; $$[$1] = $3; }
 var ast = require("./ast");
 
 exports.parseCell = function(src, cell) {
-  try {
     var ast = exports.parse(src);
     ast.visitAll(function(n) { n.loc.cell = cell });
     return ast;
-  } catch(e) {
-    e.cell = cell;
-    throw e;
-  }
 };
