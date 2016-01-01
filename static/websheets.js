@@ -176,7 +176,7 @@ var routes = {
       $.post("/debug/eval", {src: src})
         .done(function(res) {
           var string = res.string;
-          var result = "> " + string;
+          var result = string;
           if ($("#eval-verbose").prop("checked") === true) {
             delete res.string;
             result += "<br>" + JSON.stringify(res);

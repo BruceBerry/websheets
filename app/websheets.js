@@ -5,23 +5,27 @@ var fs = require("fs");
 var cjson = require("./cjson");
 var i = require("./input");
 var o = require("./output");
+var ast = require("./ast");
 
 class WebSheet {
-  constructor() {
+  constructor(opts) {
     this.users = {admin: {user: "admin", pass: "pass"}};
     this.input = {};
     this.output = {values:{}, permissions:{}};
     this.createTable("admin", "prova", "here", ["a", "bb", "ab"]);
     this.input.prova.addRow("admin");
+    this.opts = opts;
   }
 
   save(path) {
     var json = cjson.stringify(this);
     fs.writeFileSync(path, json, "utf8");
   }
-  static load(path) {
+  static load(path, opts) {
     var json = fs.readFileSync(path, "utf8");
-    return cjson.parse(json);
+    var ws = cjson.parse(json);
+    ws.opts = opts;
+    return ws;
   }
 
   authUser(user, pass) {
@@ -85,9 +89,9 @@ class WebSheet {
     // TODO: filtering
     // we are passing the user to evalString even though data
     // tables should be user-independent
-    this.evalString(user, name); // force evaluation
-    return this.getInputTable(name);
-    // return cjson.stringify(this.output[name].censor(user));
+    if (this.opts.autoEval)
+      this.evalString(user, name); // force evaluation, can be turned off for debugging
+    return cjson.stringify(this.output[name].censor(this, user));
   }
   evalString(user, src) {
     var expr = new i.Expr(src, "fromString");
@@ -97,9 +101,9 @@ class WebSheet {
   }
   mkCellEnv(name, row, col) {
     return {
-      table: new i.TableValue(name),
-      tableName: new i.ScalarValue(name),
-      tableOwner: new i.ScalarValue(this.input[name].owner)
+      table: new ast.TableValue(name),
+      tableName: new ast.ScalarValue(name),
+      tableOwner: new ast.ScalarValue(this.input[name].owner)
     };
   }
 }

@@ -21,17 +21,18 @@ var argv = argParser(process.argv.slice(2), {
     port: 8000,
     saveFile: os.homedir() + "/.websheets",
     admin: true, // always logged in as admin
-    newAccounts: true
+    newAccounts: true, // prevent creation of new accounts
+    autoEval: true, // should viewing an output table trigger evaluation of the whole table?
   }
 });
 console.log("Listening on port", argv.port);
 
 var ws;
 if (fs.existsSync(argv.saveFile))
-  ws = WebSheet.load(argv.saveFile);
+  ws = WebSheet.load(argv.saveFile, argv);
 else {
   console.log("No savefile, starting from scratch");
-  ws = new WebSheet();
+  ws = new WebSheet(argv);
 }
 
 
@@ -134,7 +135,7 @@ app.post("/admin/purge", isAdmin, function(req, res) {
   res.end();
 });
 app.post("/admin/reset", isAdmin, function(req, res) {
-  ws = new WebSheet();
+  ws = new WebSheet(argv);
   res.end();
 });
 app.post("/admin/quit", isAdmin, function(req, res) {
@@ -144,7 +145,7 @@ app.post("/admin/quit", isAdmin, function(req, res) {
 });
 app.post("/admin/load", isAdmin, upload.single("load"), function(req, res) {
   try {
-    ws = WebSheet.load(req.file.path);
+    ws = WebSheet.load(req.file.path, argv);
     console.log("Successfully loaded state.");
     res.end();
   } finally {

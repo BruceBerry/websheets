@@ -2,6 +2,8 @@
 var _ = require("underscore");
 var cjson = require("./cjson");
 
+var o = require("./output");
+
 /* inspired by estree */
 
 exports.Loc = class SourceLocation {
@@ -74,21 +76,23 @@ exports.Binary = class Binary extends Node {
     var l,r, result;
     // first do short-circuit ops, to avoid resolving of l
     if (this.op === "&&") {
-      l = l.eval(ws, user, env).resolve(ws, user);
+      l = this.l.eval(ws, user, env).resolve(ws, user);
       if (l.value === false)
         return l;
+      r = this.r.eval(ws, user, env).resolve(ws, user).addDeps(l);
       if (typeof l.value !== "boolean" || typeof r.value !== "boolean")
         throw `Unsupported boolean values ${l.toString()} or ${r.toString()}`;
-      return r.eval(ws, user, env).resolve(ws, user).addDeps(l);
+      return r;
     } else if (this.op === "||") {
-      l = l.eval(ws, user, env).resolve(ws, user);
+      l = this.l.eval(ws, user, env).resolve(ws, user);
       if (l.value === true)
         return l;
-      return r.eval(ws, user, env).resolve(ws, user).addDeps(l);
+      return this.r.eval(ws, user, env).resolve(ws, user).addDeps(l);
     } else if (this.op === "==" || this.op === "!=") {
       // hack, just use the string representation
-      l = l.eval(ws, user, env);
-      r = r.eval(ws, user, env);
+      // TODO: if you ever have time, make this lazier
+      l = this.l.eval(ws, user, env).resolve(ws, user);
+      r = this.r.eval(ws, user, env).resolve(ws, user);
       result = new ScalarValue(l.toString() === r.toString()).addDeps(l, r);
       if (this.op === "!=")
         result.value = !result.value;
@@ -225,9 +229,9 @@ exports.Select = class Select extends Node {
     if (l.isTable()) {
       // see if you can do it lazily first
       try {
-        return this.sType === "col" ? l.setCol(this.ixCol) : l.setRow(this.ixCol);
+        return this.sType === "col" ? l.setCol(ws, this.ixCol) : l.setRow(ws, this.ixCol);
       } catch(e) {
-        if (e.msg.startsWith("SETERROR:")) { // awful hack, fix errors later
+        if (e.msg && e.msg.startsWith("SETERROR:")) { // awful hack, fix errors later
           l = l.resolve(ws, user);
           return this.sType === "col" ? selectCol(l, this.ixCol) : selectRow(l, this.ixCol);
         } else
@@ -262,9 +266,10 @@ exports.Project = class Project extends Node {
     var projectCols = function(l, cols) {
       // {a:1,b:2,c:3}{a,c} => {a:1,c:3}
       if (l.isTuple()) {
-        _.every(cols, c =>l.map.hasOwnProperty(col))
-        
-          throw `Column ${col} does not exist`;
+        _.each(cols, c => {
+          if (!l.map.hasOwnProperty(c))
+            throw `Column ${c} does not exist`;
+        });
         return new TupleValue(_.pick(l.map, cols));
       }
       // [{a:1,b:2},{a:1,b:3}]{b} => [{b:2}, {b:3}]
@@ -283,7 +288,7 @@ exports.Project = class Project extends Node {
     };
     if (l.isTable()) {
       try {
-        return this.sType === "col" ? l.setCol(this.ixCols) : l.setRow(this.ixCols);
+        return this.sType === "col" ? l.setCol(ws, this.ixCols) : l.setRow(ws, this.ixCols);
       } catch(e) {
         if (e.msg.startsWith("SETERROR:")) { // awful hack, fix errors later
           l = l.resolve(ws, user);
@@ -305,6 +310,9 @@ exports.Generate = class Generate extends Node {
   }
   toString() { return `{${this.expr.toString()} for ${_.map(this.srcs, (v,k) => k + ' in ' + v.toString()).join(", ")} when ${this.cond.toString()}}`; }
   children() { return [this.expr, this.srcs, this.cond]; }
+  eval(ws, user, env) {
+    throw "TODO";
+  }
 };
 
 exports.Filter = class Filter extends Node {
@@ -315,6 +323,38 @@ exports.Filter = class Filter extends Node {
   }
   toString() { return `(${this.l.toString()}[${this.filter.toString()}])`; }
   children() { return [this.l, this.filter]; }
+  eval(ws, user, env) {
+    // TODO: addDeps
+    var l = this.l.eval(ws, user, env);
+    if (l.isTable() && l.row === "*" && l.col === "*") {
+      var table = ws.input[l.name];
+      var tableRows = range(0, table.cells.length).map(i => new TableValue(l.name, i));
+      var result = _(tableRows).reduce((acc, row) => {
+        var rowEnv = _.object(table.columns.map(c => [c, row.deepClone().setCol(ws, c)]));
+        var rowResult = this.filter.eval(ws, user, Object.assign(rowEnv, env));
+        if (rowResult.value === true) {
+          acc.push(row);
+        } else if (rowResult.value !== false)
+          throw `${this.filter.toString()} does not return a boolean value`;
+        return acc;
+      }, []);
+      return new ListValue(result);
+    }
+    l = l.resolve(ws, user);
+    if (l.isList() && _(l.values).every(v => v.isTuple())) {
+      var result = _(l.values).reduce((acc, row) => {
+        var rowEnv = row.map.deepClone();
+        var rowResult = this.filter.eval(ws, user, Object.assign(rowEnv, env));
+        if (rowResult.value === true) {
+          acc.push(row);
+        } else if (rowResult.value !== false)
+          throw `${this.filter.toString()} does not return a boolean value`;
+        return acc;
+      }, []);
+      return new ListValue(result);
+    }
+    throw `Filter operation unsupported for ${l.toString()}`;
+  }
 };
 
 exports.Call = class Call extends Node {
@@ -325,6 +365,9 @@ exports.Call = class Call extends Node {
   }
   toString() { return `${this.name}(${this.args.map(k=>k.toString()).join(", ")})`; }
   children() { return this.args; }
+  eval(ws, user, env) {
+    throw "TODO";
+  }
 };
 
 /***************************************************/
@@ -334,7 +377,7 @@ class Value {
     this.type = type;
     this.deps = deps;
   }
-  resolve(ws) {
+  resolve(ws, user) {
     return this;
   }
   toString() { throw "abstract class"; }
@@ -362,9 +405,17 @@ class Value {
 class ScalarValue extends Value {
   constructor(value, deps) {
     super("Scalar", deps);
+    if (value === undefined)
+      throw "Undefined";
     this.value = value;
   }
-  toString() { return this.value.toString(); }
+  toString() {
+    if (this.value === null)
+      return "null";
+    if (typeof this.value === "string")
+      return `"${this.value.toString()}"`;
+    return this.value.toString();
+  }
 }
 exports.ScalarValue = ScalarValue;
 
@@ -415,6 +466,8 @@ class TableValue extends Value {
       // a.1
       if (typeof this.col === "string") {
         // a.1.b => fetch
+        if (!ws.output[this.name])
+          ws.output[this.name] = o.Table.fromInputTable(ws.input[this.name]);
         var cell = ws.output[this.name].cells[this.row][this.col];
         if (cell.state === "evaluating")
           throw `Loop`;
@@ -426,13 +479,13 @@ class TableValue extends Value {
           cell.state = "evaluating";
           var env = ws.mkCellEnv(this.name, this.row, this.col);
           // TODO: catch the right type of exception to stop propagating it
-          cell.data = cell.data.eval(ws, user, env);
+          cell.data = cell.data.ast.eval(ws, user, env);
           cell.state = "evaluated";
           return cell.data;
         }
       } else {
         // a.1.{b,c} => resolve({b: a.1.b, c: a.1.c})
-        var obj = _.object(_.map(this.col, function(col) {
+        var obj = _.object(_.map(this.col, col => {
           var v = new TableValue(this.name, this.row, col);
           return [col, v];
         }));
@@ -459,6 +512,10 @@ class ListValue extends Value {
   toString() { return "[" + this.values.map(x => x.toString()).join(", ") + "]"; }
   isList() { return true; }
   merge(l) { return new ListValue(this.values.concat(l.values)); }
+  resolve(ws, user) {
+    this.values = _(this.values).map(v => v.resolve(ws, user));
+    return this;
+  }
 }
 exports.ListValue = ListValue;
 
@@ -470,7 +527,11 @@ class TupleValue extends Value {
   children() { _.values(this.map); }
   toString() { return "{" + _.map(this.map, (v,k)=>k+":"+v.toString()).join(", ") + "}"; }
   isTuple() { return true; }
-  merge(t) { return new TupleValue(Object.assign(t.map.deepClone(), this.map.deepClone())); }
+  merge(t) { return new TupleValue(Object.assign(this.map.deepClone(), t.map.deepClone())); }
+  resolve(ws, user) {
+    this.map = _(this.map).mapObject(v => v.resolve(ws, user));
+    return this;
+  }
 }
 exports.TupleValue = TupleValue;
 
@@ -478,7 +539,7 @@ _.each(exports, v => cjson.register(v));
 
 var range = function(start, end) {
   var a = [];
-  for (var i = 0, v = start; i++, v++; i < end)
+  for (var i = 0, v = start; i < end; i++, v++)
     a[i] = v;
   return a;
 };
