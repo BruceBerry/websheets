@@ -262,7 +262,7 @@ $(document).ready(function() {
 
   // precompile handlebars templates
   ["users", "tables", "login", "logout", "alert", "eval", "home", "drop",
-   "import", "admin", "input"].forEach(
+   "import", "admin", "input", "output"].forEach(
     n => templates[n] = Handlebars.compile($(`#${n}-template`).html())
   );
   Handlebars.registerPartial('drop', templates.drop)

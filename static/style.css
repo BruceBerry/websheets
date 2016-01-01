@@ -74,6 +74,7 @@ code .func {
 }
 
 
-td.editable {
+td.editable > code {
     cursor: text;
+    outline: 0px solid transparent;
 }

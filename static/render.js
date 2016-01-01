@@ -1,13 +1,10 @@
 "use strict";
+var pwf = src => highlight(cleanJunk(src));
 
 function renderInputTable(table) {
   document.title = `${table.name} - Input View`;
-  // TODO: editing
-  // TODO: when I do "each" on the row i need to hide the _owner and
-  // possibly other values
   $("#content").html(templates.input({table}));
 
-  var pwf = src => highlight(cleanJunk(src));
 
   var sel = "td:not(.disabled):not(.side-opt)";
   $(sel).on("mouseenter", function() {
@@ -21,6 +18,7 @@ function renderInputTable(table) {
     if ($this.data("editing"))
       return;
     $this.html("<code contenteditable=\"true\">" + pwf($this.data("src")) + "</code>");
+    $this.css("background-color", "");
   });
   $(sel).on("keydown", function(e) {
     var $this = $(this);
@@ -49,6 +47,7 @@ function renderInputTable(table) {
     } else if (!$this.data("editing")) {
       $this.data("editing", true);
       var width = $this.css("width");
+      $this.css("background-color", "white");
       $this.css("max-width", width);
       $this.css("min-width", width);
       $this.css("width", width);
@@ -67,7 +66,6 @@ function renderInputTable(table) {
     var index = $this.parents("[data-row]").data("row");
     if ($this.attr("class") === "row-insert-after")
       index++;
-    debugger;
     $.post(`/table/${table.name}/addrow`, {row: index})
       .done(() => routes.inputTable(table.name))
       .fail(res => displayError(res.responseText));
@@ -76,7 +74,6 @@ function renderInputTable(table) {
   $(".row-delete").on("click", function() {
     var $this = $(this);
     var index = $this.parents("[data-row]").data("row");
-    var index = $this.data("index");
     $.post(`/table/${table.name}/deleterow`, {row: index})
       .done(() => routes.inputTable(table.name))
       .fail(res => displayError(res.responseText));
@@ -86,103 +83,105 @@ function renderInputTable(table) {
 }
 
 function renderOutputTable(table) {
-  document.title = `${table.name} - Value View`;
-  var result = "";
-  result += `<h1>${table.name} - Value View</h1><p>${table.description}</p>`;
-  result += `<p><a class="btn btn-default" href="#tables/${table.name}/edit">Switch to Expression View</a></p>`;
+  document.title = `${table.name} - Output View`;
+  $("#content").html(templates.output({table}));
   
-  result += `<table data-name="${table.name}" class='table table-bordered table-striped table-hover'><thead><tr>`;
-  result += `<th class="side-opt"></th>`;
-  table.colnames.forEach(c => { result += `<th>${c}</th>` });
-  result += "</thead><tbody>"
-  table.rows.forEach(function(row, rowi) {
-    result += `<tr data-index="${rowi}" data-owner="${row.owner}">`;
-    row.index = rowi;
-    result += "<td class='side-opt'>" + templates.drop({table, row}) + "</td>";
-    row.cells.forEach(function(cell, celli) {
-      cell.index = celli;
-      var cp = printCell(cell);
-      var denied = cp === false ? "denied" : "";
-      result += `<td class="cell ${denied}" data-colname="${table.colnames[cell.index]}" data-index="${row.index}" data-toggle="tooltip" title data-original-title="Cell Owner: ${cell.owner}" data-delay='{"show": 800, "hide": 100}' data-container="body">`;
-      if (cp)
-        result += `<code>${cp}</code>`;
-      result += "</td>";
-    });
-    result += "</tr>";
-  });
+  // var result = "";
+  // result += `<h1>${table.name} - Value View</h1><p>${table.description}</p>`;
+  // result += `<p><a class="btn btn-default" href="#tables/${table.name}/edit">Switch to Expression View</a></p>`;
+  
+  // result += `<table data-name="${table.name}" class='table table-bordered table-striped table-hover'><thead><tr>`;
+  // result += `<th class="side-opt"></th>`;
+  // table.colnames.forEach(c => { result += `<th>${c}</th>` });
+  // result += "</thead><tbody>"
+  // table.rows.forEach(function(row, rowi) {
+  //   result += `<tr data-index="${rowi}" data-owner="${row.owner}">`;
+  //   row.index = rowi;
+  //   result += "<td class='side-opt'>" + templates.drop({table, row}) + "</td>";
+  //   row.cells.forEach(function(cell, celli) {
+  //     cell.index = celli;
+  //     var cp = printCell(cell);
+  //     var denied = cp === false ? "denied" : "";
+  //     result += `<td class="cell ${denied}" data-colname="${table.colnames[cell.index]}" data-index="${row.index}" data-toggle="tooltip" title data-original-title="Cell Owner: ${cell.owner}" data-delay='{"show": 800, "hide": 100}' data-container="body">`;
+  //     if (cp)
+  //       result += `<code>${cp}</code>`;
+  //     result += "</td>";
+  //   });
+  //   result += "</tr>";
+  // });
 
-  result += "</tbody></table><p><button id='add-row' class='button'>Add Row</button></p>";
+  // result += "</tbody></table><p><button id='add-row' class='button'>Add Row</button></p>";
 
 
-  $("#content").html(result);
+  // $("#content").html(result);
 
   // TODO: buggy, disabled for now
   // $(function () {
   //   $('[data-toggle="tooltip"]').tooltip()
   // });
 
-  $("table td.cell").on("dblclick", function(e) {
-    var $this = $(this);
-    if($(this).find('input').is(':focus'))
-      return; // wut
-    var prev = $(this).html();
-    var val = $("code", $this).text();
+  // $("table td.cell").on("dblclick", function(e) {
+  //   var $this = $(this);
+  //   if($(this).find('input').is(':focus'))
+  //     return; // wut
+  //   var prev = $(this).html();
+  //   var val = $("code", $this).text();
 
-    var name = $("table").data("name");
-    var row = parseInt($(this).data("index"));
-    var col = $this.data("colname");
-    $this.html(`<input class="code" type='text' id='write-form'/>`)
-      .find("input")
-      .val(val)
-      .trigger("focus")
-      .on({
-        blur: function() { $(this).trigger("abort"); },
-        keyup: function(e) {
-          if (e.which == "13")
-            $(this).trigger("save");
-          else if (e.which == "27")
-            $(this).trigger("abort");
-        },
-        abort: () => $this.html(prev),
-        save: function() {
-          var expr = $(this).val();
-          if (content == null)
-            $(this).trigger("abort");
-          $.post(`tables/${name}/${row}/${col}`, {expr})
-            .done(() => doTable(name))
-            .fail(res => {
-              doError(res.statusText);
-              $(this).trigger("abort");
-            });            
-        }
-      });
-  });
+  //   var name = $("table").data("name");
+  //   var row = parseInt($(this).data("index"));
+  //   var col = $this.data("colname");
+  //   $this.html(`<input class="code" type='text' id='write-form'/>`)
+  //     .find("input")
+  //     .val(val)
+  //     .trigger("focus")
+  //     .on({
+  //       blur: function() { $(this).trigger("abort"); },
+  //       keyup: function(e) {
+  //         if (e.which == "13")
+  //           $(this).trigger("save");
+  //         else if (e.which == "27")
+  //           $(this).trigger("abort");
+  //       },
+  //       abort: () => $this.html(prev),
+  //       save: function() {
+  //         var expr = $(this).val();
+  //         if (content == null)
+  //           $(this).trigger("abort");
+  //         $.post(`tables/${name}/${row}/${col}`, {expr})
+  //           .done(() => doTable(name))
+  //           .fail(res => {
+  //             doError(res.statusText);
+  //             $(this).trigger("abort");
+  //           });            
+  //       }
+  //     });
+  // });
 
-  $("#add-row").on("click", function() {
-    var name = $("table").data("name");
-    $.post(`tables/${name}`)
-      .done(() => doTable(name))
-      .fail(res => doError(res.statusText));
-  });
+  // $("#add-row").on("click", function() {
+  //   var name = $("table").data("name");
+  //   $.post(`tables/${name}`)
+  //     .done(() => doTable(name))
+  //     .fail(res => doError(res.statusText));
+  // });
 
-  $(".row-delete").on("click", function() {
-    var name = $("table").data("name");
-    var index = $(this).data("index");
-    $.ajax(`tables/${name}/${index}`, {
-      method: "DELETE"
-    }).done(() => doTable(name))
-      .fail(res => doError(res.statusText));
-  });
+  // $(".row-delete").on("click", function() {
+  //   var name = $("table").data("name");
+  //   var index = $(this).data("index");
+  //   $.ajax(`tables/${name}/${index}`, {
+  //     method: "DELETE"
+  //   }).done(() => doTable(name))
+  //     .fail(res => doError(res.statusText));
+  // });
 
-  function insert(name, i) {
-    $.post(`tables/${name}/${i}`)
-      .done(() => doTable(name))
-      .fail(res => doError(res.statusText));
-  }
-  $(".row-insert-before").on("click",
-    e => insert($("table").data("name"), $(e.target).data("index")));
-  $(".row-insert-after").on("click",
-    e => insert($("table").data("name"), $(e.target).data("index")+1));
+  // function insert(name, i) {
+  //   $.post(`tables/${name}/${i}`)
+  //     .done(() => doTable(name))
+  //     .fail(res => doError(res.statusText));
+  // }
+  // $(".row-insert-before").on("click",
+  //   e => insert($("table").data("name"), $(e.target).data("index")));
+  // $(".row-insert-after").on("click",
+  //   e => insert($("table").data("name"), $(e.target).data("index")+1));
 
 }
 

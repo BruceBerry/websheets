@@ -75,11 +75,11 @@ class WebSheet {
   }
   deleteRow(user, name, row) {
     // TODO: evaluate del row permission
-    this.input[name].deleteRow(user, row);
+    this.input[name].deleteRow(row);
   }
   writeCell(user, name, row, column, src) {
     // TODO: evaluate write permission (add newVal and oldVal to env)
-    // TODO: maybe update ownership if cells have owners?
+    // TODO: update ownership if cells will have owners
     this.input[name].writeCell(row, column, src);
   }
 }

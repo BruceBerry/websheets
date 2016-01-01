@@ -37,11 +37,19 @@ class Table {
     if (i < 0 || i > this.cells.length)
       throw "Invalid index";
     var newRow = this.perms.init.deepClone();
-    // TODO: update row cell coordinates
+    newRow = _.mapObject(newRow, (e, name) => {
+      var newCell = `${this.name}.${i}.${name}`;
+      if (e.cell) {
+        e.cell = newCell;
+        e.ast.visitAll(n => { n.loc.cell = newCell });
+      }
+      return e;
+    });
+    // TODO: update row cell coordinates, also in the ast
     newRow._owner = user;
     this.cells.splice(i, 0, newRow);
   }
-  delRow(i) {
+  deleteRow(i) {
     if (i < 0 || i >= this.cells.length)
       throw "Invalid index";
     this.cells.splice(i, 1);
@@ -51,12 +59,12 @@ class Table {
       throw "Invalid Column";
     if (row < 0 || row >= this.cells.length)
       throw "Invalid Row";
-    var oldCell = this.cells[row].col;
-    this.cells[row].col = new Expr(src, oldCell.cell);
+    var oldCell = this.cells[row][col];
+    this.cells[row][col] = new Expr(src, oldCell.cell);
   }
   static get _json() { return "InputTable"; }
   export() {
-    // makes copy and removes ast stuff
+    // removes ast info
     return {
       name: this.name,
       description: this.description,
