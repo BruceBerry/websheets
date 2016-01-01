@@ -99,8 +99,8 @@ expr : null    { $$ = new ast.Literal(null, new ast.Loc(this._$)); }
 
      | 'if' expr 'then' expr 'else' expr { $$ = new ast.IfThenElse($2, $4, $6, new ast.Loc(this._$)); }
 
-     | expr '.' ID { $$ = new ast.Select($1,$3, new ast.Loc(this._$)); }
-     | expr '.' NUM { $$ = new ast.Select($1, $3, new ast.Loc(this._$)); }
+     | expr '.' ID { $$ = new ast.Select($1, $3, new ast.Loc(this._$)); }
+     | expr '.' NUM { $$ = new ast.Select($1, Number($3), new ast.Loc(this._$)); }
      | expr '{' proj_els '}' { $$ = new ast.Project($1, $3, new ast.Loc(this._$)); }
      | '{' expr 'for' for_els 'when' expr '}' { $$ = new ast.Generate($2, $4, $6, new ast.Loc(this._$)); }
      | '{' expr 'for' for_els '}' { $$ = new ast.Generate($2,$4, true, new ast.Loc(this._$)); }

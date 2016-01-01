@@ -25,7 +25,7 @@ class WebSheet {
   }
 
   authUser(user, pass) {
-    return this.users[user] && this.users[user].pass === pass;
+    return this.users.hasOwnProperty(user) && this.users[user].pass === pass;
   }
   createUser(user, pass) {
     if (this.users[user])

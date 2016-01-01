@@ -20,7 +20,8 @@ var argv = argParser(process.argv.slice(2), {
   default: {
     port: 8000,
     saveFile: os.homedir() + "/.websheets",
-    admin: true // always logged in as admin
+    admin: true, // always logged in as admin
+    newAccounts: true
   }
 });
 console.log("Listening on port", argv.port);
@@ -97,6 +98,8 @@ app.post("/user/logout", isUser, function(req, res) {
   res.end();
 });
 app.post("/user/create", function(req, res) {
+  if (!config.newAccounts)
+    return res.status(400).end("Account creation is disabled");
   if (ws.createUser(req.body.user, req.body.pass)) {
     console.log("created user", req.body.user);
     res.end();
@@ -119,7 +122,7 @@ app.get("/user/list", isUser, function(req, res) {
 // 2. ADMIN/DEBUG
 app.post("/debug/eval", isUser, function(req, res) {
   var result = ws.evalString(req.session.user, req.body.src);
-  debugger;
+  result.string = result.toString();
   res.json(result);
 });
 app.get("/debug/keywords", isUser, function(req, res) {

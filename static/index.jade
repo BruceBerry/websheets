@@ -110,8 +110,16 @@ block content
     <h1>Eval Console</h1>
     <p>Type a WF expression in the following form and the result will be appended below.</p>
     <form class="form-inline" id="eval-form">
-      <input class="form-control" id="eval" type="text" />
-      <button type="submit" id="eval-btn" class="btn btn-default">Eval</button>
+      <input class="form-control" id="eval" size="40" type="text" />
+      <div class="btn-group" role="group">
+        <button type="submit" id="eval-btn" class="btn btn-default">Eval</button>
+        <button type="submit" id="eval-clear-btn" class="btn btn-warning">Clear</button>
+      </div>
+      <div class="checkbox">
+        <label>
+          &nbsp;&nbsp;&nbsp;&nbsp;<input id="eval-verbose" type="checkbox"> Verbose
+        </label>
+      </div>
     </form>
     <div><ul id="eval-console"></ul></div>
 

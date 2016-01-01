@@ -174,9 +174,21 @@ var routes = {
       var src = $("#eval", $(this)).val();
       var append = (code, isError) => $("#eval-console").append(`<li>${isError ? "<b>Error:</b>":""}<code>${code}</code></li>`);
       $.post("/debug/eval", {src: src})
-        .done(res => append(JSON.stringify(res), false))
+        .done(function(res) {
+          var string = res.string;
+          var result = "> " + string;
+          if ($("#eval-verbose").prop("checked") === true) {
+            delete res.string;
+            result += "<br>" + JSON.stringify(res);
+          }
+          append(result, false);
+        })
         .fail(res => append(res.responseText, true));
       e.preventDefault();
+    });
+    $("#eval-clear-btn").click(function(e) {
+      e.preventDefault();
+      $("#eval-console").html("");
     });
   },
   import: function() {
