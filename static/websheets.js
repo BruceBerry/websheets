@@ -171,11 +171,11 @@ var routes = {
     $("#content").html(templates.eval());
 
     $("#eval-form").on("submit", function(e) {
-      var expr = $("#eval").val();
-      var append = code => $("#eval-console").append(`<li><code>${code}</code></li>`);
-      $.post("/debug/eval", {expr})
-        .done(res => append(res.responseText))
-        .fail(res => append(res.responseText));
+      var src = $("#eval", $(this)).val();
+      var append = (code, isError) => $("#eval-console").append(`<li>${isError ? "<b>Error:</b>":""}<code>${code}</code></li>`);
+      $.post("/debug/eval", {src: src})
+        .done(res => append(JSON.stringify(res), false))
+        .fail(res => append(res.responseText, true));
       e.preventDefault();
     });
   },

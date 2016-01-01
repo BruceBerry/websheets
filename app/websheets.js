@@ -48,7 +48,6 @@ class WebSheet {
   purge() {
     this.output = {values:{}, permissions: {}};
   }
-
   listTables() {
     // [publicTable]
     return _.map(this.input, t => _.pick(t, "name", "description", "owner"));
@@ -81,6 +80,27 @@ class WebSheet {
     // TODO: evaluate write permission (add newVal and oldVal to env)
     // TODO: update ownership if cells will have owners
     this.input[name].writeCell(row, column, src);
+  }
+  getOutputTable(user, name) {
+    // TODO: filtering
+    // we are passing the user to evalString even though data
+    // tables should be user-independent
+    this.evalString(user, name); // force evaluation
+    return this.getInputTable(name);
+    // return cjson.stringify(this.output[name].censor(user));
+  }
+  evalString(user, src) {
+    var expr = new i.Expr(src, "fromString");
+    if (expr.error)
+      throw expr.error;
+    return expr.ast.eval(this, user, {}).resolve(this);
+  }
+  mkCellEnv(name, row, col) {
+    return {
+      table: new i.TableValue(name),
+      tableName: new i.ScalarValue(name),
+      tableOwner: new i.ScalarValue(this.input[name].owner)
+    };
   }
 }
 cjson.register(WebSheet);

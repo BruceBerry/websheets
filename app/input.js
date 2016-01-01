@@ -122,7 +122,6 @@ class Expr {
       this.ast = wf.parseCell(src, cell);
     } catch(e) {
       this.ast = null;
-      debugger;
       this.error = e;
     }
   }

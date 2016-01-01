@@ -118,8 +118,9 @@ app.get("/user/list", isUser, function(req, res) {
 
 // 2. ADMIN/DEBUG
 app.post("/debug/eval", isUser, function(req, res) {
-  var result = ws.eval(req.session.user, req.body.code);
-  res.end(result);
+  var result = ws.evalString(req.session.user, req.body.src);
+  debugger;
+  res.json(result);
 });
 app.get("/debug/keywords", isUser, function(req, res) {
   var result = ws.listKeywords();
@@ -180,7 +181,7 @@ app.get("/table/:name/input", isOwnerOrAdmin, function(req, res) {
   res.type("json").end(ws.getInputTable(req.params.name));
 });
 app.get("/table/:name/output", isUser, function(req, res) {
-  res.json(ws.getOutputTable(req.session.user, req.params.name));
+  res.type("json").end(ws.getOutputTable(req.session.user, req.params.name));
 });
 app.post("/table/:name/edit", isUser, function(req, res) {
   var name = req.params.name;
