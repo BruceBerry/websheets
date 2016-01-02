@@ -77,6 +77,10 @@ code .func {
   display: none;
 }
 
+#eval {
+  font-family: monospace;
+  font-size: smaller;
+}
 
 td.editable > code {
     cursor: text;

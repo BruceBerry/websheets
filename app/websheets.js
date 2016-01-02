@@ -124,7 +124,7 @@ class WebSheet {
       tableOwner: new ast.ScalarValue(this.input[name].owner),
       row: new ast.TableValue(name, row),
       rowIndex: new ast.ScalarValue(row),
-      rowOwner: new ast.ScalarValue(this.input[name].cells[row][col]._owner),
+      rowOwner: new ast.ScalarValue(this.input[name].cells[row]._owner),
       col: new ast.TableValue(name, undefined, col),
       colName: new ast.ScalarValue(col),
       cell: new ast.TableValue(name, row, col),

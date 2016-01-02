@@ -371,9 +371,6 @@ var cartesian = function(obj) {
     }
   }, []);
 };
-setTimeout(function() {
-  console.log(cartesian({a:[1,2], b:[3,4]}));
-}, 1000);
 
 exports.Filter = class Filter extends Node {
   constructor(l, filter, location) {
@@ -454,7 +451,13 @@ class Value {
   isTable() { return false; }
   addDeps(...args) {
     args = _.flatten(args);
-    _(args).each(arg => { this.deps = this.deps.concat(arg.deps); });
+    _(args).each(arg => {
+      debugger;
+      if (arg instanceof Dep)
+        this.deps.push(arg);
+      else
+        this.deps = this.deps.concat(arg.deps);
+    });
     return this;
   }
 }
@@ -462,8 +465,10 @@ class Value {
 class ScalarValue extends Value {
   constructor(value, deps) {
     super("Scalar", deps);
-    if (value === undefined)
+    if (value === undefined) {
+      debugger;
       throw "Undefined";
+    }
     this.value = value;
   }
   toString() {
@@ -545,7 +550,9 @@ class TableValue extends Value {
             cell.state = "evaluating";
             var env = ws.mkCellEnv(this.name, this.row, this.col);
             cell.data = cell.data.ast.eval(ws, user, env);
-            cell.addDeps(new Dep(this.name, this.row, this.col));
+            // if (typeof cell.addDeps !== "function")
+            //   debugger;
+            cell.data.addDeps(new Dep(this.name, this.row, this.col));
             cell.state = "evaluated";
             return cell.data;
           } catch(e) {

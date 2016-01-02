@@ -153,9 +153,10 @@ var routes = {
     document.title = "Eval Console";
     $(".alert").fadeOut();
     $("#content").html(templates.eval());
-
+    $("#eval").val(localStorage.eval);
     $("#eval-form").on("submit", function(e) {
       var src = $("#eval", $(this)).val();
+      localStorage.eval = src;
       var append = (code, isError) => $("#eval-console").append(`<li>${isError ? "<b>Error:</b>":""}<code>${code}</code></li>`);
       $.post("/debug/eval", {src: src})
         .done(function(res) {

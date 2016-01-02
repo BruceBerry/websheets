@@ -110,7 +110,7 @@ block content
     <h1>Eval Console</h1>
     <p>Type a WF expression in the following form and the result will be appended below.</p>
     <form class="form-inline" id="eval-form">
-      <input class="form-control" id="eval" size="40" type="text" />
+      <input class="form-control" id="eval" size="60" type="text" />
       <div class="btn-group" role="group">
         <button type="submit" id="eval-btn" class="btn btn-default">Eval</button>
         <button type="submit" id="eval-clear-btn" class="btn btn-warning">Clear</button>
@@ -163,7 +163,7 @@ block content
 
   +template#input-template.
     <h1>
-      {{table.name}} <small>by {{table.owner}}</small> (Input View)
+      {{table.name}} <small>by {{table.owner}}</small>
       <a class="pull-right btn btn-default" href="#table/{{table.name}}/output">Switch to Output View</a>
     </h1>
     <p>{{table.description}}</p>
@@ -260,7 +260,7 @@ block content
 
   +template#output-template.
     <h1>
-      {{table.name}} <small>by {{table.owner}}</small> (Output View)
+      {{table.name}} <small>by {{table.owner}}</small>
       <a class="pull-right btn btn-default" href="#table/{{table.name}}/input">Switch to Input View</a>
     </h1>
     <p>{{table.description}}</p>
