@@ -6,9 +6,11 @@
   "dependencies": {
     "body-parser": "^1.14.2",
     "cookie-parser": "^1.4.0",
+    "csv-parse": "^1.0.1",
     "express": "^4.13.3",
     "express-debug": "^1.1.1",
     "express-session": "^1.12.1",
+    "fibrous": "^0.4.0",
     "jade": "^1.11.0",
     "jison": "^0.4.15",
     "lodash": "^3.10.1",
