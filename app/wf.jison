@@ -103,7 +103,7 @@ expr : null    { $$ = new ast.Literal(null, new ast.Loc(this._$)); }
      | expr '.' NUM { $$ = new ast.Select($1, Number($3), new ast.Loc(this._$)); }
      | expr '{' proj_els '}' { $$ = new ast.Project($1, $3, new ast.Loc(this._$)); }
      | '{' expr 'for' for_els 'when' expr '}' { $$ = new ast.Generate($2, $4, $6, new ast.Loc(this._$)); }
-     | '{' expr 'for' for_els '}' { $$ = new ast.Generate($2,$4, true, new ast.Loc(this._$)); }
+     | '{' expr 'for' for_els '}' { $$ = new ast.Generate($2,$4, new ast.Literal(true, ast.Loc.fakeLoc()), new ast.Loc(this._$)); }
      | expr '[' expr ']' { $$ = new ast.Filter($1, $3, new ast.Loc(this._$)); }
 
      | ID '(' n_list_els ')' { $$ = new ast.Call($1, $3, new ast.Loc(this._$)); }

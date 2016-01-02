@@ -6,7 +6,7 @@ var o = require("./output");
 
 /* inspired by estree */
 
-exports.Loc = class SourceLocation {
+class Loc {
   constructor(jloc) { // jison location
     this.cell = "undefined";
     this.start = jloc.first_column;
@@ -15,7 +15,11 @@ exports.Loc = class SourceLocation {
   toString() {
     return `${this.cell}:${this.start}-${this.end}`;
   }
+  static fakeLoc() {
+    return new Loc({first_column: -1, last_column: 1});
+  }
 };
+exports.Loc = Loc;
 
 class Node {
   constructor(type, location) {
@@ -105,17 +109,18 @@ exports.Binary = class Binary extends Node {
     }
     l = this.l.eval(ws, user, env).resolve(ws, user);
     r = this.r.eval(ws, user, env).resolve(ws, user);
-    if ((l.isList() && r.isList) || l.isTuple() && r.isTuple()) {
+    if ((l.isList() && r.isList()) || (l.isTuple() && r.isTuple()))
       if (this.op === "+")
         return l.merge(r);
-      else if (this.op === "in" || this.op === "not in") {
-        result = _.find(r.map || r.values, function(el) {
-          return el.toString() === l.toString();
-        });
-        if (this.op === "not in")
-          result = !result;
-        return new ScalarValue(result).addDeps(l, r.allDeps());
-      }
+    // for tuples, it is done on values, not keys
+    if ((this.op === "in" || this.op === "not in") && (r.isList() || r.isTuple())) {
+      result = _.some(r.map || r.values, function(el) {
+        return el.toString() === l.toString();
+      });
+      if (this.op === "not in")
+        result = !result;
+      // is r.children() too strict?
+      return new ScalarValue(result).addDeps(l, r.children());
     }
     // no other list/tuple ops remain
     if (l.isList() || r.isList())
@@ -311,14 +316,64 @@ exports.Generate = class Generate extends Node {
     super("Generate", location);
     this.expr = expr;
     this.srcs = srcs;
-    this.cond = cond;
+    this.cond = cond || new Literal(true);
   }
   toString() { return `{${this.expr.toString()} for ${_.map(this.srcs, (v,k) => k + ' in ' + v.toString()).join(", ")} when ${this.cond.toString()}}`; }
-  children() { return [this.expr, this.srcs, this.cond]; }
+  children() { return [this.expr, ..._.values(this.srcs), this.cond]; }
   eval(ws, user, env) {
-    throw "TODO";
+    // (expr for a in b, c in d when e)
+    var srcs = _.mapObject(this.srcs, src => {
+      src = src.eval(ws, user, env);
+      if (src.isTable() && src.rows === "*") {
+        return _.range(0, ws.input[src.name].cells.length).map(i => new TableValue(src.name, i, src.col));
+      } else {
+        src = src.resolve(ws, user);
+        if (src.isList())
+          return src.values;
+        else
+          throw "for only works with tables or lists";
+      }
+    });
+    var bindings = cartesian(srcs);
+    var result = _.reduce(bindings, (acc, binding) => {
+      var rowEnv = Object.assign(binding.deepClone(), env.deepClone());
+      var cond = this.cond.eval(ws, user, rowEnv);
+      if (cond.value === false)
+        return acc;
+      if (typeof cond.value !== "boolean")
+        throw `Condition ${this.cond} should return a boolean value`;
+      rowEnv = Object.assign(binding, env);
+      acc.push(this.expr.eval(ws, user, rowEnv).addDeps(cond));
+      return acc;
+    }, []);
+    return new ListValue(result);
   }
 };
+
+// {a: [v1,v2,..], b: [v3,v4..]} => [{a: v1, b: v3}, {a:v2, b:v4}]
+var cartesian = function(obj) {
+  return _.reduce(obj, (acc, values, key) => {
+    debugger;
+    if (acc.length === 0) {
+      // {} => [{a:v1}, {a:v2}]
+      return _.map(values, v => {var o = {}; o[key] = v; return o; });
+    } else {
+      // [{a:v1}, {a:v2}] => [{a:v1,b:v3}, {a:v1,b:v4}, ...]
+      acc = _.map(acc, prev => {
+        // {a:v1}, b, [v3,v4] => [{a:v1, b:v3}, {a:v1, b:v4}]
+        return _.map(values, v => {
+          var n = prev.deepClone();
+          n[key] = v;
+          return n;
+        });
+      });
+      return _.flatten(acc);
+    }
+  }, []);
+};
+setTimeout(function() {
+  console.log(cartesian({a:[1,2], b:[3,4]}));
+}, 1000);
 
 exports.Filter = class Filter extends Node {
   constructor(l, filter, location) {
@@ -329,15 +384,17 @@ exports.Filter = class Filter extends Node {
   toString() { return `(${this.l.toString()}[${this.filter.toString()}])`; }
   children() { return [this.l, this.filter]; }
   eval(ws, user, env) {
-    // TODO: addDeps
+    var result;
     var l = this.l.eval(ws, user, env);
     if (l.isTable() && l.row === "*" && l.col === "*") {
       var table = ws.input[l.name];
-      var tableRows = range(0, table.cells.length).map(i => new TableValue(l.name, i));
-      var result = _(tableRows).reduce((acc, row) => {
+      var tableRows = _.range(0, table.cells.length).map(i => new TableValue(l.name, i));
+      result = _(tableRows).reduce((acc, row) => {
         var rowEnv = _.object(table.columns.map(c => [c, row.deepClone().setCol(ws, c)]));
         var rowResult = this.filter.eval(ws, user, Object.assign(rowEnv, env));
         if (rowResult.value === true) {
+          // TODO: override addDeps for tuple and list to push deps to the leaves
+          _(row).each(c => c.addDeps(rowResult));
           acc.push(row);
         } else if (rowResult.value !== false)
           throw `${this.filter.toString()} does not return a boolean value`;
@@ -347,10 +404,11 @@ exports.Filter = class Filter extends Node {
     }
     l = l.resolve(ws, user);
     if (l.isList() && _(l.values).every(v => v.isTuple())) {
-      var result = _(l.values).reduce((acc, row) => {
+      result = _(l.values).reduce((acc, row) => {
         var rowEnv = row.map.deepClone();
         var rowResult = this.filter.eval(ws, user, Object.assign(rowEnv, env));
         if (rowResult.value === true) {
+          _(row).each(c => c.addDeps(rowResult));
           acc.push(row);
         } else if (rowResult.value !== false)
           throw `${this.filter.toString()} does not return a boolean value`;
@@ -395,15 +453,9 @@ class Value {
   isTuple() { return false; }
   isTable() { return false; }
   addDeps(...args) {
-    if (args.length === 0)
-      return this;
-    var arg = args.pop();
-    if (Array.isArray(arg)) {
-      args.concat(arg);
-    } else {
-      this.deps.concat(arg.deps);
-    }
-    return this.addDeps(...args);
+    args = _.flatten(args);
+    _(args).each(arg => { this.deps = this.deps.concat(arg.deps); });
+    return this;
   }
 }
 
@@ -461,7 +513,7 @@ class TableValue extends Value {
   }
   _expand(ws) {
     if (this.row === "*")
-      this.row = range(0, ws.input[this.name].cells.length);
+      this.row = _.range(0, ws.input[this.name].cells.length);
     if (this.col === "*")
       this.col = ws.input[this.name].columns.slice(0);
   }
@@ -471,6 +523,7 @@ class TableValue extends Value {
       // a.1
       if (typeof this.col === "string") {
         // a.1.b => fetch
+        // this is the core branch
         if (!ws.output[this.name])
           ws.output[this.name] = o.Table.fromInputTable(ws.input[this.name]);
         var cell = ws.output[this.name].cells[this.row][this.col];
@@ -492,6 +545,7 @@ class TableValue extends Value {
             cell.state = "evaluating";
             var env = ws.mkCellEnv(this.name, this.row, this.col);
             cell.data = cell.data.ast.eval(ws, user, env);
+            cell.addDeps(new Dep(this.name, this.row, this.col));
             cell.state = "evaluated";
             return cell.data;
           } catch(e) {
@@ -552,11 +606,15 @@ class TupleValue extends Value {
 }
 exports.TupleValue = TupleValue;
 
-_.each(exports, v => cjson.register(v));
+class Dep {
+  constructor(name, col, row) {
+    // this might change later if dependencies require
+    // depending on an entire column, row etc
+    this.name = name;
+    this.col = col;
+    this.row = row;
+  }
+  toString() { return `${this.name}.${this.col}.${this.row}`; }
+}
 
-var range = function(start, end) {
-  var a = [];
-  for (var i = 0, v = start; i < end; i++, v++)
-    a[i] = v;
-  return a;
-};
+_.each(exports, v => cjson.register(v));
