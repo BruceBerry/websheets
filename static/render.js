@@ -136,13 +136,39 @@ function cleanJunk(wf) {
   return wf;
 }
 
+// current set of tables and column names
+var keywords = {};
+var joinkw = kws => new RegExp("\\b(" + kws.join("|") + ")\\b", "g")
+var updateKeywords = function() {
+  $.get("/debug/keywords")
+    .done(function(kw) {
+      keywords = kw;
+      if (keywords.tables.length > 0)
+        keywords.re_tables = joinkw(keywords.tables);
+      if (keywords.columns.length > 0)
+        keywords.re_columns = joinkw(keywords.columns);
+      if (keywords.functions.length > 0)
+        keywords.re_functions = joinkw(keywords.functions);
+      keywords.re_kw = joinkw([
+        "in", "not", "if", "then", "else", "when", "null", "true", "false"
+      ]);
+      keywords.re_env = joinkw([
+        "table", "tableName", "tableOwner",
+        "row", "rowIndex", "rowOwner",
+        "col", "colName",
+        "this", "user", "newVal"
+      ]);
+    })
+    .fail(() => console.log("Keywords currently unavailable"));
+}
+updateKeywords();
 function highlight(wf) {
   if (!config.highlight) {
     return wf;
   }
   wf = wf.toString();
-  wf = wf.replace(/\b(in|not|if|then|else|when|null|true|false)\b/g, "<span class=\"keyword\">$&</span>");
-  wf = wf.replace(/\b(owner|row|user|this|val|newVal)\b/g, "<span class=\"env\">$&</span>");
+  wf = wf.replace(keywords.re_kw, "<span class=\"keyword\">$&</span>");
+  wf = wf.replace(keywords.re_env, "<span class=\"env\">$&</span>");
   if (keywords.re_tables)
     wf = wf.replace(keywords.re_tables, "<span class=\"tname\">$&</span>");  
   if (keywords.re_columns)

@@ -1,14 +1,17 @@
 "use strict";
 var cp = require("child_process");
-var fibrous = require('fibrous');
 var parse = require("csv-parse");
 var _ = require("underscore");
+var fibrous = require("fibrous");
+var fs = require("fs");
 
 var i = require("./input");
 
 var sep = "AABBAABBAA";
 exports.import = function(ws, user, filename) {
-  
+  if (!fs.existsSync(filename))
+    throw `XLS file ${filename} does not exist`;
+
   var cmd = `python app/xls2csv.py -s 0 -p ${sep} ${filename}`;
   var output = cp.execSync(cmd).toString();
 
@@ -18,14 +21,12 @@ exports.import = function(ws, user, filename) {
   // '\8220' => '"'
   // '\8221' => '"'
   _(csvs).each(function(csv) {
-    fibrous.run(function() {
-      // parse csv
-      csv = parse.sync(csv, {skip_empty_lines: false});
-      var table = csvToTable(csv, user);
-      if (ws.input[table.name])
-        throw `Table ${table.name} already exists`;
-      ws.input[table.name] = table;
-    });
+    // parse csv
+    csv = parse.sync(csv, {skip_empty_lines: false});
+    var table = csvToTable(csv, user);
+    if (ws.input[table.name])
+      throw `Table ${table.name} already exists`;
+    ws.input[table.name] = table;
   });
 };
 
@@ -38,33 +39,49 @@ var csvToTable = function(csv, owner) {
   
   var tname = csv[0][0];
   var tdesc = csv[1][0];
+
+  console.log("Importing", tname);
   
   var [columns, ...data] = getSquare(csv, 3, 0);
-
   col = columns.length + 2;
   // actually there's no need to scan height, we know the size
   var [columns2, ...perms] = getSquare(csv, 3, col);
-  if (columns.length !== columns2.length)
+  columns.shift();
+  columns2.pop();
+  if (columns.toString() !== columns2.toString())
     throw "Format error";
-  columns[0] = "_owner";
-  columns2[columns2.length-1] = "row";
-
+  
   var table = new i.Table(tname, tdesc, owner, columns);
-  table.cells = _(data).map((r,ix) => _(r).map((c,cx) => new i.Expr(c, `${tname}.${ix}.${columns[cx]}`)));
-
-  var permRows = ["read", "write", "init", "add", "del"];
-  _(perms).each((prow, pix) => {
-    var p = permRows[pix];
-    _(prow).each((c,cix) => {
-      var col = columns2[cix];
-      if (p === "init" && col === "row" && c !== "")
-        throw "No init column";
-      if ((p === "add" || p === "del") && col != "row" && c !== "")
-        throw "No add/del for columns";
-      table.perms[p][col] = new i.Expr(c, `${tname}.${p}.${col}`);
-    });
+  var owcols = ["_owner", ...columns];
+  table.cells = _(data).map((r,ix) => {
+    return _.object(_(r).map((c,cx) => {
+      var col = owcols[cx];
+      if (col === "_owner")
+        return [col, c];
+      else
+        return [col, new i.Expr(c, `${tname}.${ix}.${col}`)];
+    }));
   });
 
+  var permRows = ["read", "write", "init", "add", "del"];
+  var pCols = [...columns, "row"];
+  _(perms).each((prow, pix) => {
+    var perm = permRows[pix];
+    _(prow).each((c,cix) => {
+      var col = pCols[cix];
+      if (perm === "init" && col === "row" && c !== "")
+        throw "No init column";
+      if ((perm === "add" || perm === "del") && col != "row" && c !== "")
+        throw "No add/del for columns";
+      if (perm === "init" && col === "row")
+        return;
+      if ((perm === "add" || perm === "del") && col !== "row")
+        return;
+      //debugger;
+      // console.log(perm, col);
+      table.perms[perm][col] = new i.Expr(c, `${tname}.${perm}.${col}`);
+    });
+  });
   return table;
 
 };
@@ -76,7 +93,6 @@ var getSquare = function(csv, rowStart, colStart) {
   while(csv[row][col] !== "" && csv[row][col] !== undefined)
     col++;
   col--;
-  debugger;
   var colEnd = col;
 
   var colIxs = _.range(colStart, col+1);
@@ -88,5 +104,3 @@ var getSquare = function(csv, rowStart, colStart) {
   rows = csv.slice(rowStart, rowEnd+1);
   return rows.map(r => r.slice(colStart, colEnd+1));
 };
-
-exports.import(null,null, "xls/rsvp.xls");

@@ -14,6 +14,11 @@ watch:
 debug:
 	node -- debug $(es6flags) server.js
 
+bdebug:
+	echo "Open node-inspector first"
+	node --debug-brk $(es6flags) server.js
+
+
 clean:
 	rm -rf wf.js static/index.html static/base.html
 

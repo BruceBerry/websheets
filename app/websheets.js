@@ -72,6 +72,8 @@ class WebSheet {
   }
   getInputTable(name) {
     // server performed access control
+    if (!this.input[name])
+      throw `Table ${name} does not exist`;
     return cjson.stringify(this.input[name].export());
   }
   addRow(user, name, row) {
@@ -93,6 +95,8 @@ class WebSheet {
   getOutputTable(user, name) {
     // TODO: filtering
     // eval them separately, otherwise the first cell error terminates the evaluation
+    if (!this.input[name])
+      throw `Table ${name} does not exist`;
     if (this.opts.autoEval) {
       _(this.input[name].cells).each((row,i) => {
         _(row).each((c, k) => {
@@ -129,6 +133,7 @@ class WebSheet {
   }
   import(user, filename) {
     importer.import(this, user, filename);
+    console.log("Import completed.");
     this.purge();
   }
 }

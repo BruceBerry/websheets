@@ -4,22 +4,6 @@
 var user = null;
 // handlebar templates
 var templates = {};
-// current set of tables and column names
-var keywords = {};
-var updateKeywords = function() {
-  $.get("/debug/keywords")
-    .done(function(kw) {
-      keywords = kw;
-      if (keywords.tables.length > 0)
-        keywords.re_tables = new RegExp("\\b(" + keywords.tables.join("|") + ")\\b", "g");
-      if (keywords.columns.length > 0)
-        keywords.re_columns = new RegExp("\\b(" + keywords.columns.join("|") + ")\\b", "g");
-      if (keywords.functions.length > 0)
-        keywords.re_functions = new RegExp("\\b(" + keywords.functions.join("|") + ")\\b", "g");
-    })
-    .fail(() => console.log("Keywords currently unavailable"));
-}
-updateKeywords();
 
 var config = {
   clean: false,

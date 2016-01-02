@@ -6,6 +6,7 @@ var bodyParser = require('body-parser');
 var upload = require("multer")({ dest: 'uploads/' });
 var favicon = require("serve-favicon");
 var debug = require("express-debug");
+var fibrous = require("fibrous");
 
 var fs = require("fs");
 var os = require("os");
@@ -42,9 +43,11 @@ app.use(favicon("static/favicon.ico"));
 app.use(cookieParser());
 app.use(session({secret: "TODO", resave: false, saveUninitialized: true}));
 app.use(bodyParser.urlencoded({ extended: false }));
-app.use(bodyParser.json()); 
-
+app.use(bodyParser.json());
 app.use("/static", express.static("static"));
+app.use(fibrous.middleware);
+
+
 
 app.get("/", function(req, res) {
   res.redirect("static/");
@@ -221,7 +224,7 @@ app.post("/table/:name/deleterow", isUser, function(req, res) {
 });
 
 
-app.post("/table/import", isUser, upload.single("xls"), function(req, res) {
+app.post("/table/import", isUser, upload.single("xls"), fibrous.middleware, function(req, res) {
   try {
     ws.import(req.session.user, req.file.path);
     res.end();
@@ -229,5 +232,15 @@ app.post("/table/import", isUser, upload.single("xls"), function(req, res) {
     fs.unlink(req.file.path);
   }
 });
+
+app.get("/puppa", isUser, upload.single("qqq"), function(req, res) {
+  try {
+    ws.import("admin", "xls/todo.xls");
+    res.end();
+  } finally {
+    fs.unlink(req.file.path); 
+  }
+})
+
 
 var server = app.listen(argv.port, "localhost");
