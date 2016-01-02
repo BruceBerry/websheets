@@ -191,7 +191,7 @@ block content
           <th>Write</th>
           {{#each table.perms.write}}
           <td class="editable" data-col="{{@key}}" data-src="{{this.src}}">
-            <code>{{{pcode this.src}}}</code>
+            <code contenteditable="true">{{{pcode this.src}}}</code>
           </td>
           {{/each}}
         </tr>
@@ -199,7 +199,7 @@ block content
           <th>Init</th>
           {{#each table.perms.init}}
           <td class="editable" data-col="{{@key}}" data-src="{{this.src}}">
-            <code>{{{pcode this.src}}}</code>
+            <code contenteditable="true">{{{pcode this.src}}}</code>
           </td>
           {{/each}}
           <td class="disabled"></td>
@@ -210,7 +210,7 @@ block content
           <td class="disabled"></td>
           {{/each}}
           <td class="editable" data-col="row" data-src="{{table.perms.add.row.src}}">
-            <code>{{{pcode table.perms.add.row.src}}}</code>
+            <code contenteditable="true">{{{pcode table.perms.add.row.src}}}</code>
           </td>          
         </tr>
         <tr data-perm="del">
@@ -219,7 +219,7 @@ block content
           <td class="disabled"></td>
           {{/each}}
           <td class="editable" data-col="row" data-src="{{table.perms.del.row.src}}">
-            <code>{{{pcode table.perms.del.row.src}}}</code>
+            <code contenteditable="true">{{{pcode table.perms.del.row.src}}}</code>
           </td>          
         </tr>
       </tbody>
@@ -241,10 +241,14 @@ block content
         {{#each table.cells}}
         <tr data-row="{{@index}}">
           <td class="side-opt">{{> drop}}</td>
-          <td class="editable" data-col="_owner" data-src="{{this._owner}}"><code>{{this._owner}}</code></td>
+          <td class="editable" data-col="_owner" data-src="{{this._owner}}">
+            <code contenteditable="true">{{this._owner}}</code>
+          </td>
           {{#each this}}
           {{#if (neq this.src undefined)}}
-          <td class="editable" data-col="{{@key}}" data-src="{{this.src}}"><code>{{{pcode this.src}}}</code></td>
+          <td class="editable" data-col="{{@key}}" data-src="{{this.src}}">
+            <code contenteditable="true">{{{pcode this.src}}}</code>
+          </td>
           {{/if}}
           {{/each}}
         </tr>
@@ -252,7 +256,7 @@ block content
       </tbody>
     </table>
 
-    <p><button id='add-row' class='button'>Add Row</button></p>
+    <p><button id='add-row' class='btn btn-default'>Add Row</button></p>
 
   +template#output-template.
     <h1>
@@ -275,13 +279,19 @@ block content
         {{#each table.cells}}
         <tr data-row="{{@index}}">
           <td class="side-opt">{{> drop}}</td>
-          <td class="editable" data-col="_owner" data-src="{{this._owner}}"><code>{{this._owner}}</code></td>
+          <td class="editable" data-col="_owner" data-src="{{this._owner}}">
+            <code contenteditable="true">{{this._owner}}</code>
+          </td>
           {{#each this}}
-          {{#if (neq this.src undefined)}}
-          <td class="editable" data-col="{{@key}}" data-src="{{this.src}}"><code>{{this.src}}</code></td>
+          {{#if (neq this.state undefined)}}
+          <td class="editable wf-{{this.state}}" data-col="{{@key}}" data-src="{{this.string}}" data-state="{{this.state}}">
+            <code contenteditable="true">{{this.string}}</code>
+          </td>
           {{/if}}
           {{/each}}
         </tr>
         {{/each}}
       </tbody>
     </table>
+
+    <p><button id='add-row' class='btn btn-default'>Add Row</button></p>

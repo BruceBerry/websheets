@@ -239,7 +239,6 @@ var routes = {
         .fail(res => displayError(res.responseText));
     });
 
-
     $("#quit-btn").on("click", function() {
       $.post("/admin/quit")
         .done(() => displayMessage("WebSheet server terminated."))

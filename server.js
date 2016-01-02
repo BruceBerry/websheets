@@ -22,7 +22,7 @@ var argv = argParser(process.argv.slice(2), {
     saveFile: os.homedir() + "/.websheets",
     admin: true, // always logged in as admin
     newAccounts: true, // prevent creation of new accounts
-    autoEval: true, // should viewing an output table trigger evaluation of the whole table?
+    autoEval: false, // should viewing an output table trigger evaluation of the whole table?
   }
 });
 console.log("Listening on port", argv.port);
@@ -193,6 +193,7 @@ app.post("/table/:name/edit", isUser, function(req, res) {
   row = Number(row);
   // double as both privileged and normal cell editing
   if (perm) {
+    // TODO: since this is not admin-only, it needs some checking
     isOwnerOrAdmin(req, res, function() {
       ws.input[name].perms[perm][column] =
         new i.Expr(src, `${name}.${perm}.${column}`);

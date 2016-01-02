@@ -5,34 +5,48 @@ function renderInputTable(table) {
   document.title = `${table.name} - Input View`;
   $("#content").html(templates.input({table}));
 
+  interact(table, "input");
+}
+
+function renderOutputTable(table) {
+  document.title = `${table.name} - Output View`;
+  $("#content").html(templates.output({table}));
+  
+  interact(table, "output");
+}
+
+function interact(table, mode) {
 
   var sel = "td:not(.disabled):not(.side-opt)";
   $(sel).on("mouseenter", function() {
     var $this = $(this);
     if ($this.data("editing"))
       return;
-    $("code", this).html($this.data("src"));
+    // use dataset instead of jquery b/c of autoconversion
+    $("code", this).html(this.dataset.src);
   });
   $(sel).on("mouseleave", function() {
     var $this = $(this);
     if ($this.data("editing"))
       return;
-    $this.html("<code contenteditable=\"true\">" + pwf($this.data("src")) + "</code>");
+    var f = mode === "input" ? pwf : s => s;
+    $this.html("<code contenteditable=\"true\">" + f(this.dataset.src) + "</code>");
     $this.css("background-color", "");
   });
   $(sel).on("keydown", function(e) {
     var $this = $(this);
     if (e.which == 13) {
       e.preventDefault();
+      // TODO: check if any change was made
       var body = {
         src: $("code", this).html(),
         perm: $this.parent().data("perm"),
-        row: $this.parent().data("row"),
+        row: this.parentElement.dataset.row,
         column: $this.data("col")
       };
       $this.data("editing", false);
       $.post(`/table/${table.name}/edit`, body)
-        .done(() => routes.inputTable(table.name))
+        .done(() => routes[mode + "Table"](table.name))
         .fail(function(res) {
           displayError(res.responseText);
           $this.data("editing", false);
@@ -55,9 +69,10 @@ function renderInputTable(table) {
 
   });
 
+
   $("#add-row").on("click", function() {
     $.post(`/table/${table.name}/addrow`)
-      .done(() => routes.inputTable(table.name))
+      .done(() => routes[mode + "Table"](table.name))
       .fail(res => displayError(res.responseText));
   });
 
@@ -67,7 +82,7 @@ function renderInputTable(table) {
     if ($this.attr("class") === "row-insert-after")
       index++;
     $.post(`/table/${table.name}/addrow`, {row: index})
-      .done(() => routes.inputTable(table.name))
+      .done(() => routes[mode + "Table"](table.name))
       .fail(res => displayError(res.responseText));
   });
 
@@ -75,115 +90,11 @@ function renderInputTable(table) {
     var $this = $(this);
     var index = $this.parents("[data-row]").data("row");
     $.post(`/table/${table.name}/deleterow`, {row: index})
-      .done(() => routes.inputTable(table.name))
+      .done(() => routes[mode + "Table"](table.name))
       .fail(res => displayError(res.responseText));
   });
-
-
 }
 
-function renderOutputTable(table) {
-  document.title = `${table.name} - Output View`;
-  $("#content").html(templates.output({table}));
-  
-  // var result = "";
-  // result += `<h1>${table.name} - Value View</h1><p>${table.description}</p>`;
-  // result += `<p><a class="btn btn-default" href="#tables/${table.name}/edit">Switch to Expression View</a></p>`;
-  
-  // result += `<table data-name="${table.name}" class='table table-bordered table-striped table-hover'><thead><tr>`;
-  // result += `<th class="side-opt"></th>`;
-  // table.colnames.forEach(c => { result += `<th>${c}</th>` });
-  // result += "</thead><tbody>"
-  // table.rows.forEach(function(row, rowi) {
-  //   result += `<tr data-index="${rowi}" data-owner="${row.owner}">`;
-  //   row.index = rowi;
-  //   result += "<td class='side-opt'>" + templates.drop({table, row}) + "</td>";
-  //   row.cells.forEach(function(cell, celli) {
-  //     cell.index = celli;
-  //     var cp = printCell(cell);
-  //     var denied = cp === false ? "denied" : "";
-  //     result += `<td class="cell ${denied}" data-colname="${table.colnames[cell.index]}" data-index="${row.index}" data-toggle="tooltip" title data-original-title="Cell Owner: ${cell.owner}" data-delay='{"show": 800, "hide": 100}' data-container="body">`;
-  //     if (cp)
-  //       result += `<code>${cp}</code>`;
-  //     result += "</td>";
-  //   });
-  //   result += "</tr>";
-  // });
-
-  // result += "</tbody></table><p><button id='add-row' class='button'>Add Row</button></p>";
-
-
-  // $("#content").html(result);
-
-  // TODO: buggy, disabled for now
-  // $(function () {
-  //   $('[data-toggle="tooltip"]').tooltip()
-  // });
-
-  // $("table td.cell").on("dblclick", function(e) {
-  //   var $this = $(this);
-  //   if($(this).find('input').is(':focus'))
-  //     return; // wut
-  //   var prev = $(this).html();
-  //   var val = $("code", $this).text();
-
-  //   var name = $("table").data("name");
-  //   var row = parseInt($(this).data("index"));
-  //   var col = $this.data("colname");
-  //   $this.html(`<input class="code" type='text' id='write-form'/>`)
-  //     .find("input")
-  //     .val(val)
-  //     .trigger("focus")
-  //     .on({
-  //       blur: function() { $(this).trigger("abort"); },
-  //       keyup: function(e) {
-  //         if (e.which == "13")
-  //           $(this).trigger("save");
-  //         else if (e.which == "27")
-  //           $(this).trigger("abort");
-  //       },
-  //       abort: () => $this.html(prev),
-  //       save: function() {
-  //         var expr = $(this).val();
-  //         if (content == null)
-  //           $(this).trigger("abort");
-  //         $.post(`tables/${name}/${row}/${col}`, {expr})
-  //           .done(() => doTable(name))
-  //           .fail(res => {
-  //             doError(res.statusText);
-  //             $(this).trigger("abort");
-  //           });            
-  //       }
-  //     });
-  // });
-
-  // $("#add-row").on("click", function() {
-  //   var name = $("table").data("name");
-  //   $.post(`tables/${name}`)
-  //     .done(() => doTable(name))
-  //     .fail(res => doError(res.statusText));
-  // });
-
-  // $(".row-delete").on("click", function() {
-  //   var name = $("table").data("name");
-  //   var index = $(this).data("index");
-  //   $.ajax(`tables/${name}/${index}`, {
-  //     method: "DELETE"
-  //   }).done(() => doTable(name))
-  //     .fail(res => doError(res.statusText));
-  // });
-
-  // function insert(name, i) {
-  //   $.post(`tables/${name}/${i}`)
-  //     .done(() => doTable(name))
-  //     .fail(res => doError(res.statusText));
-  // }
-  // $(".row-insert-before").on("click",
-  //   e => insert($("table").data("name"), $(e.target).data("index")));
-  // $(".row-insert-after").on("click",
-  //   e => insert($("table").data("name"), $(e.target).data("index")+1));
-
-}
 
 function printCell(c) {
   // TODO: this must be done in the server!
@@ -216,6 +127,7 @@ function printValue(v, rowPerm) {
 function cleanJunk(wf) {
   if (!config.clean)
     return wf;
+  wf = wf.toString();
   wf = wf.replace(/\.\d\./g, ".");
   wf = wf.replace(/\.\"(\w+?)\"/g, ".$1");
   wf = wf.replace("EName == \"\" || ", "");
@@ -228,6 +140,7 @@ function highlight(wf) {
   if (!config.highlight) {
     return wf;
   }
+  wf = wf.toString();
   wf = wf.replace(/\b(in|not|if|then|else|when|null|true|false)\b/g, "<span class=\"keyword\">$&</span>");
   wf = wf.replace(/\b(owner|row|user|this|val|newVal)\b/g, "<span class=\"env\">$&</span>");
   if (keywords.re_tables)

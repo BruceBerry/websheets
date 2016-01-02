@@ -6,6 +6,7 @@ var cjson = require("./cjson");
 var i = require("./input");
 var o = require("./output");
 var ast = require("./ast");
+var importer = require("./import");
 
 class WebSheet {
   constructor(opts) {
@@ -66,6 +67,7 @@ class WebSheet {
   }
   createTable(user, name, desc, columns) {
     this.input[name] = new i.Table(name, desc, user, columns);
+    this.purge();
     return true;
   }
   getInputTable(name) {
@@ -75,22 +77,34 @@ class WebSheet {
   addRow(user, name, row) {
     // TODO: evaluate add row permission
     this.input[name].addRow(user, row);
+    this.purge();
   }
   deleteRow(user, name, row) {
     // TODO: evaluate del row permission
     this.input[name].deleteRow(row);
+    this.purge();
   }
   writeCell(user, name, row, column, src) {
     // TODO: evaluate write permission (add newVal and oldVal to env)
     // TODO: update ownership if cells will have owners
     this.input[name].writeCell(row, column, src);
+    this.purge();
   }
   getOutputTable(user, name) {
     // TODO: filtering
-    // we are passing the user to evalString even though data
-    // tables should be user-independent
-    if (this.opts.autoEval)
-      this.evalString(user, name); // force evaluation, can be turned off for debugging
+    // eval them separately, otherwise the first cell error terminates the evaluation
+    if (this.opts.autoEval) {
+      _(this.input[name].cells).each((row,i) => {
+        _(row).each((c, k) => {
+          try {
+            this.evalString(user, `${name}.${i}.${k}`);
+          } catch(e) {
+            console.log(e.toString());
+          }
+        })});
+    }
+    if (!this.output[name])
+      this.output[name] = o.Table.fromInputTable(this.input[name]);
     return cjson.stringify(this.output[name].censor(this, user));
   }
   evalString(user, src) {
@@ -103,8 +117,19 @@ class WebSheet {
     return {
       table: new ast.TableValue(name),
       tableName: new ast.ScalarValue(name),
-      tableOwner: new ast.ScalarValue(this.input[name].owner)
+      tableOwner: new ast.ScalarValue(this.input[name].owner),
+      row: new ast.TableValue(name, row),
+      rowIndex: new ast.ScalarValue(row),
+      rowOwner: new ast.ScalarValue(this.input[name].cells[row][col]._owner),
+      col: new ast.TableValue(name, undefined, col),
+      colName: new ast.ScalarValue(col),
+      cell: new ast.TableValue(name, row, col),
+      // owner: TODO: cell owner?
     };
+  }
+  import(user, filename) {
+    importer.import(this, user, filename);
+    this.purge();
   }
 }
 cjson.register(WebSheet);

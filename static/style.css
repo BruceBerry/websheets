@@ -66,7 +66,11 @@ code .func {
 }
 
 .wf-error {
-  background-color: #FED7D9;
+  background-color: #FEE7E9;
+}
+
+.wf-unevaluated {
+  background-color: #FFFFCA;
 }
 
 .invisible {

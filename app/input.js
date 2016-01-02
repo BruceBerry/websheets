@@ -45,7 +45,6 @@ class Table {
       }
       return e;
     });
-    // TODO: update row cell coordinates, also in the ast
     newRow._owner = user;
     this.cells.splice(i, 0, newRow);
   }

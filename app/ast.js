@@ -43,7 +43,12 @@ exports.Literal = class Literal extends Node {
     super("Literal", location);
     this.value = data;
   }
-  toString() { return this.value.toString(); }
+  toString() {
+    if (this.value === null)
+      return "null";
+    if (typeof this.value === "string")
+      return `"${this.value}"`;
+    return this.value.toString(); }
   eval(ws, user, env) { return new ScalarValue(this.value); }
 };
 
@@ -413,7 +418,7 @@ class ScalarValue extends Value {
     if (this.value === null)
       return "null";
     if (typeof this.value === "string")
-      return `"${this.value.toString()}"`;
+      return `"${this.value}"`;
     return this.value.toString();
   }
 }
@@ -476,12 +481,24 @@ class TableValue extends Value {
         else if (cell.state === "error")
           throw cell.data;
         else if (cell.state === "unevaluated") {
-          cell.state = "evaluating";
-          var env = ws.mkCellEnv(this.name, this.row, this.col);
-          // TODO: catch the right type of exception to stop propagating it
-          cell.data = cell.data.ast.eval(ws, user, env);
-          cell.state = "evaluated";
-          return cell.data;
+          // parse/lexical error
+          if (cell.data.error) {
+            cell.state = "error";
+            cell.data = cell.data.error.toString();
+            throw cell.data;
+          }
+          // runtime error
+          try {
+            cell.state = "evaluating";
+            var env = ws.mkCellEnv(this.name, this.row, this.col);
+            cell.data = cell.data.ast.eval(ws, user, env);
+            cell.state = "evaluated";
+            return cell.data;
+          } catch(e) {
+            cell.state = "error";
+            cell.data = e.toString();
+            throw cell.data;
+          }
         }
       } else {
         // a.1.{b,c} => resolve({b: a.1.b, c: a.1.c})
