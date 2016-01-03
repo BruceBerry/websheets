@@ -4,23 +4,7 @@ var _ = require("underscore");
 
 var wf = require("./wf");
 var cjson = require("./cjson");
-
-// not intended to be general-purpose
-Object.defineProperty(Object.prototype, "deepClone", { value:
-  function() {
-    if (Array.isArray(this)) {
-      var arr = [];
-      this.forEach(x => arr.push(x ? x.deepClone() : x));
-      return arr;
-    } else if (typeof this === "object") {
-      var obj = Object.create(this.__proto__);
-      Object.keys(this).forEach(k => { obj[k] = this[k] ? this[k].deepClone() : this[k] });
-      return obj;
-    } else
-      return this;
-  }
-});
-
+var ast = require("./ast");
 
 class Table {
   constructor(name, description, owner, columns) {
@@ -113,12 +97,12 @@ function allow(tname, type, cname) {
 }
 
 class Expr {
-  constructor(src, cell) {
+  constructor(src, cell, ast) {
     this.src = src;
     this.cell = cell;
     try {
       this.error = null;
-      this.ast = wf.parseCell(src, cell);
+      this.ast = ast || wf.parseCell(src, cell);
     } catch(e) {
       this.ast = null;
       this.error = e;
@@ -127,6 +111,32 @@ class Expr {
 }
 cjson.register(Expr);
 exports.Expr = Expr;
+
+exports.combinePerms = function(p1, p2) {
+  if (p1.src === "" && p2.src === "")
+    return new Expr("true", p1.cell);
+  if (p1.src === "" || p2.error)
+    return p2.deepClone();
+  if (p2.src === "" || p1.error)
+    return p1.deepClone();
+  return new Expr(p1.src + " && " + p2.src, p1.cell, new ast.Binary("&&", p1.ast, p2.ast, ast.Loc.fakeLoc()));
+};
+
+// not intended to be general-purpose
+Object.defineProperty(Object.prototype, "deepClone", { value:
+  function() {
+    if (Array.isArray(this)) {
+      var arr = [];
+      this.forEach(x => arr.push(x ? x.deepClone() : x));
+      return arr;
+    } else if (typeof this === "object") {
+      var obj = Object.create(this.__proto__);
+      Object.keys(this).forEach(k => { obj[k] = this[k] ? this[k].deepClone() : this[k] });
+      return obj;
+    } else
+      return this;
+  }
+});
 
 // var t = new Table("hi", "qqq", "me", ["a", "b"]});
 // var jt = cjson.stringify(t.deepClone());

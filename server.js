@@ -23,7 +23,10 @@ var argv = argParser(process.argv.slice(2), {
     saveFile: os.homedir() + "/.websheets",
     admin: true, // always logged in as admin
     newAccounts: true, // prevent creation of new accounts
-    autoEval: false, // should viewing an output table trigger evaluation of the whole table?
+    autoEval: true, // should viewing an output table trigger evaluation of the whole table?
+    debug: true, // output table json responses leak debug information
+    verbose: true, // print evaluation info
+    adminReads: false, // does canRead always return true for admin (still evaluates)
   }
 });
 console.log("Listening on port", argv.port);
@@ -222,8 +225,6 @@ app.post("/table/:name/deleterow", isUser, function(req, res) {
   ws.deleteRow(req.session.user, req.params.name, req.body.row);
   res.end();
 });
-
-
 app.post("/table/import", isUser, upload.single("xls"), fibrous.middleware, function(req, res) {
   try {
     ws.import(req.session.user, req.file.path);
@@ -232,15 +233,5 @@ app.post("/table/import", isUser, upload.single("xls"), fibrous.middleware, func
     fs.unlink(req.file.path);
   }
 });
-
-app.get("/puppa", isUser, upload.single("qqq"), function(req, res) {
-  try {
-    ws.import("admin", "xls/todo.xls");
-    res.end();
-  } finally {
-    fs.unlink(req.file.path); 
-  }
-})
-
 
 var server = app.listen(argv.port, "localhost");

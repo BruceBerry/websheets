@@ -18,7 +18,7 @@ class Loc {
   static fakeLoc() {
     return new Loc({first_column: -1, last_column: 1});
   }
-};
+}
 exports.Loc = Loc;
 
 class Node {
@@ -42,7 +42,7 @@ class Node {
   eval(ws, user, env) { throw "Abstract class"; }
 }
 
-exports.Literal = class Literal extends Node {
+class Literal extends Node {
   constructor(data, location) {
     super("Literal", location);
     this.value = data;
@@ -54,7 +54,8 @@ exports.Literal = class Literal extends Node {
       return `"${this.value}"`;
     return this.value.toString(); }
   eval(ws, user, env) { return new ScalarValue(this.value); }
-};
+}
+exports.Literal = Literal;
 
 exports.Identifier = class Identifier extends Node {
   constructor(id, location) {
@@ -353,7 +354,6 @@ exports.Generate = class Generate extends Node {
 // {a: [v1,v2,..], b: [v3,v4..]} => [{a: v1, b: v3}, {a:v2, b:v4}]
 var cartesian = function(obj) {
   return _.reduce(obj, (acc, values, key) => {
-    debugger;
     if (acc.length === 0) {
       // {} => [{a:v1}, {a:v2}]
       return _.map(values, v => {var o = {}; o[key] = v; return o; });
@@ -441,6 +441,7 @@ class Value {
     return this;
   }
   toString() { throw "abstract class"; }
+  toCensoredString() { return this.toString(); } // TODO: remove for safety
   visitAll(f) {
     if (f(this) !== false)
       this.children().forEach(n => n.visitAll(f));
@@ -452,7 +453,6 @@ class Value {
   addDeps(...args) {
     args = _.flatten(args);
     _(args).each(arg => {
-      debugger;
       if (arg instanceof Dep)
         this.deps.push(arg);
       else
@@ -460,13 +460,13 @@ class Value {
     });
     return this;
   }
+  asPerm() { throw `Permissions must return boolean values, not ${this.toString()}`; }
 }
 
 class ScalarValue extends Value {
   constructor(value, deps) {
     super("Scalar", deps);
     if (value === undefined) {
-      debugger;
       throw "Undefined";
     }
     this.value = value;
@@ -477,6 +477,11 @@ class ScalarValue extends Value {
     if (typeof this.value === "string")
       return `"${this.value}"`;
     return this.value.toString();
+  }
+  asPerm() {
+    if (typeof this.value !== "boolean")
+      throw `Permissions must return boolean values, not ${this.toString()}`;
+    return this.value;
   }
 }
 exports.ScalarValue = ScalarValue;
@@ -529,9 +534,9 @@ class TableValue extends Value {
       if (typeof this.col === "string") {
         // a.1.b => fetch
         // this is the core branch
-        if (!ws.output[this.name])
-          ws.output[this.name] = o.Table.fromInputTable(ws.input[this.name]);
-        var cell = ws.output[this.name].cells[this.row][this.col];
+        if (!ws.output.values[this.name])
+          ws.output.values[this.name] = o.Table.fromInputTable(ws.input[this.name]);
+        var cell = ws.output.values[this.name].cells[this.row][this.col];
         if (cell.state === "evaluating")
           throw `Loop`;
         else if (cell.state === "evaluated")
@@ -546,18 +551,22 @@ class TableValue extends Value {
             throw cell.data;
           }
           // runtime error
+          cell.state = "evaluating";
+          if (ws.opts.verbose)
+            console.log(`evaluating ${this.name}.${this.row}.${this.col}`);
+          var env = ws.mkCellEnv(this.name, this.row, this.col);
           try {
-            cell.state = "evaluating";
-            var env = ws.mkCellEnv(this.name, this.row, this.col);
             cell.data = cell.data.ast.eval(ws, user, env);
-            // if (typeof cell.addDeps !== "function")
-            //   debugger;
+            if (ws.opts.verbose)
+              console.log(`${this.name}.${this.row}.${this.col} = ${cell.data.toString()}`);
             cell.data.addDeps(new Dep(this.name, this.row, this.col));
             cell.state = "evaluated";
             return cell.data;
           } catch(e) {
             cell.state = "error";
             cell.data = e.toString();
+            if (ws.opts.verbose)
+              console.log(`error evaluating ${this.name}.${this.row}.${this.col}: ${e.toString()}`);
             throw cell.data;
           }
         }

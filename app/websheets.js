@@ -100,6 +100,8 @@ class WebSheet {
     if (this.opts.autoEval) {
       _(this.input[name].cells).each((row,i) => {
         _(row).each((c, k) => {
+          if (k === "_owner")
+            return;
           try {
             this.evalString(user, `${name}.${i}.${k}`);
           } catch(e) {
@@ -107,9 +109,9 @@ class WebSheet {
           }
         })});
     }
-    if (!this.output[name])
-      this.output[name] = o.Table.fromInputTable(this.input[name]);
-    return cjson.stringify(this.output[name].censor(this, user));
+    if (!this.output.values[name])
+      this.output.values[name] = o.Table.fromInputTable(this.input[name]);
+    return cjson.stringify(this.output.values[name].censor(this, user));
   }
   evalString(user, src) {
     var expr = new i.Expr(src, "fromString");
@@ -117,24 +119,79 @@ class WebSheet {
       throw expr.error;
     return expr.ast.eval(this, user, {}).resolve(this);
   }
-  mkCellEnv(name, row, col) {
-    return {
+  mkCellEnv(name, row, col, user) {
+    var table = this.input[name];
+    var env = {
       table: new ast.TableValue(name),
       tableName: new ast.ScalarValue(name),
-      tableOwner: new ast.ScalarValue(this.input[name].owner),
+      tableOwner: new ast.ScalarValue(table.owner),
       row: new ast.TableValue(name, row),
       rowIndex: new ast.ScalarValue(row),
-      rowOwner: new ast.ScalarValue(this.input[name].cells[row]._owner),
+      rowOwner: new ast.ScalarValue(table.cells[row]._owner),
       col: new ast.TableValue(name, undefined, col),
       colName: new ast.ScalarValue(col),
       cell: new ast.TableValue(name, row, col),
       // owner: TODO: cell owner?
     };
+    _.each(table.columns, c => { env[c] = new ast.TableValue(name, row, c); });
+    if (user)
+      env.user = new ast.ScalarValue(user);
+    return env;
   }
   import(user, filename) {
     importer.import(this, user, filename);
     console.log("Import completed.");
     this.purge();
+  }
+  canRead(user, name, row, col) {
+    var result = this._canRead(user, name, row, col);
+    return result || (user === "admin" && this.opts.adminReads);
+  }
+  _canRead(user, name, row, col) {
+    // TODO: maybe accept a dep directly
+    if (!this.output.permissions[user])
+      this.output.permissions[user] = {};
+    var userPerms = this.output.permissions[user];
+    if (!userPerms[name])
+      userPerms[name] = o.Table.permFromInputTable(this.input[name]);
+    var table = userPerms[name];
+    var cell = table.cells[row][col];
+    if (!cell)
+      throw "Cell not found";
+    // you have permission to read name.row.col iff the read permission is true
+    // AND if all the deps to the read permission are true
+    var allDeps;
+    if (cell.state === "evaluating")
+      throw `Pem Loop`;
+    else if (cell.state === "evaluated") {
+      allDeps = _.every(cell.data.deps, d => this.canRead(user, d.name, d.row, d.col));
+      return cell.data.asPerm() && allDeps;
+    } else if (cell.state === "error")
+      return false;
+    else if (cell.data.error) {
+      cell.state = "error";
+      cell.data = cell.data.error.toString();
+      return false;
+    } else if (cell.state === "unevaluated") {
+      cell.state = "evaluating";
+      if (this.opts.verbose)
+        console.log(`evaluating ${name}.${row}.${col}.read`);
+      var env = this.mkCellEnv(name, row, col, user);
+      try {
+        cell.data = cell.data.ast.eval(this, user, env);
+        if (this.opts.verbose)
+          console.log(`${name}.${row}.${col}.read = ${cell.data.toString()}`);
+        cell.state = "evaluated";
+        allDeps = _.every(cell.data.deps, d => this.canRead(user, d.name, d.row, d.col));
+        return cell.data.asPerm() && allDeps;
+      } catch(e) {
+        cell.state = "error";
+        cell.data = e.toString();
+        if (this.opts.verbose)
+          console.log(`Error evaluating ${name}.${row}.${col}.read: ${e.toString()}`);
+        return false;
+      }
+    }
   }
 }
 cjson.register(WebSheet);
