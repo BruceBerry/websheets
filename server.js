@@ -233,5 +233,10 @@ app.post("/table/import", isUser, upload.single("xls"), fibrous.middleware, func
     fs.unlink(req.file.path);
   }
 });
+app.get("/table/:name/:row/:col", isUser, function(req, res) {
+  var num = Number(req.params.row);
+  if (isNaN(num)) throw "NaN";
+  res.type("json").end(ws.getCell(req.session.user, req.params.name, num, req.params.col));
+});
 
 var server = app.listen(argv.port, "localhost");
