@@ -25,4 +25,7 @@ clean:
 api:
 	node $(es6flags) api.js
 
-.PHONY: watch api clean debug
+todo:
+	grep "TODO" *.js app/*.js
+
+.PHONY: watch api todo clean debug bdebug

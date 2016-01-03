@@ -7,7 +7,7 @@ explicitly register the constructor with `register`.
 
 */
 
-var cache = {};
+var cache = exports.cache = {};
 
 var tag = function(obj) {
   if (typeof obj === "object" && obj && obj.constructor && obj.constructor.name) {
@@ -35,8 +35,10 @@ var reviver = function(k, v) {
   if (v && v._type) {
     // console.log("Reviving", v._type, cache[v._type]);
     var p = cache[v._type];
-    if (!p)
+    if (!p) {
+      debugger;
       throw v._type + " prototype is not registered";
+    }
     delete v._type;
     var obj = Object.create(p);
     Object.assign(obj, v);

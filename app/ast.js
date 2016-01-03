@@ -6,6 +6,9 @@ var o = require("./output");
 
 /* inspired by estree */
 
+// TODO: maybe list and tuples should inherit all the deps of their children
+// and only toCensoredString should know about ignoring the top-level deps
+
 class Loc {
   constructor(jloc) { // jison location
     this.cell = "undefined";
@@ -85,17 +88,16 @@ exports.Binary = class Binary extends Node {
   eval(ws, user, env) {
     var l,r, result;
     // first do short-circuit ops, to avoid resolving of l
+    // only falsy values are false, 0, null and "". lists and tuples are true
     if (this.op === "&&") {
       l = this.l.eval(ws, user, env).resolve(ws, user);
-      if (l.value === false)
+      if (l.value === false || l.value === 0 || l.value === null || l.value === "")
         return l;
       r = this.r.eval(ws, user, env).resolve(ws, user).addDeps(l);
-      if (typeof l.value !== "boolean" || typeof r.value !== "boolean")
-        throw `Unsupported boolean values ${l.toString()} or ${r.toString()}`;
       return r;
     } else if (this.op === "||") {
       l = this.l.eval(ws, user, env).resolve(ws, user);
-      if (l.value === true)
+      if (l.value !== false && l.value !== 0 && l.value !== null && l.value !== "")
         return l;
       return this.r.eval(ws, user, env).resolve(ws, user).addDeps(l);
     } else if (this.op === "==" || this.op === "!=") {
@@ -426,7 +428,29 @@ exports.Call = class Call extends Node {
   toString() { return `${this.name}(${this.args.map(k=>k.toString()).join(", ")})`; }
   children() { return this.args; }
   eval(ws, user, env) {
-    throw "TODO";
+    var args = _.map(this.args, arg => arg.eval(ws, user, env));
+    if (ws.functions[this.name]) {
+      // TODO: row deps (e.g. variable of a loop) and declassification deps
+      // id, concat, avg, sum, trust, after
+      return ws.functions[this.name](ws, user, ...args);
+      // builtin functions do not automatically inherit argument deps.
+    } else if (ws.scripts[this.name]) {
+      var script = ws.scripts[this.name];
+      // * output: all args (including nested deps) and all cells fetched through
+      // the json api become output deps
+      // * login: auto login for this user in the json api (set cookie for js api,
+      //  whitelist host for bash)
+      // * side effects: all cells written through the json api have input deps.
+      // with the json api are deps
+      // TODO: the api currently does not expose value-only, we need that.
+      // it seems like here we do
+      if (script.type === "js") {
+        throw "JS support not implemented";
+      } else if (script.type === "bash") {
+        throw "OS support not implemented";
+      }
+    } else
+      throw `Undefined function ${this.name}`;
   }
 };
 
@@ -653,5 +677,6 @@ class Dep {
   }
   toString() { return `${this.name}.${this.col}.${this.row}`; }
 }
+exports.Dep = Dep;
 
 _.each(exports, v => cjson.register(v));

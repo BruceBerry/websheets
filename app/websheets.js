@@ -7,6 +7,7 @@ var i = require("./input");
 var o = require("./output");
 var ast = require("./ast");
 var importer = require("./import");
+var wsfuncs = require("./functions");
 
 class WebSheet {
   constructor(opts) {
@@ -14,18 +15,20 @@ class WebSheet {
     this.input = {};
     this.output = {values:{}, permissions:{}};
     this.createTable("admin", "prova", "here", ["a", "bb", "ab"]);
-    this.input.prova.addRow("admin");
     this.opts = opts;
+    this.functions = wsfuncs;
+    this.input.prova.addRow("admin");
   }
 
   save(path) {
-    var json = cjson.stringify(this);
+    var json = cjson.stringify(_.omitClone(this, "opts", "functions"));
     fs.writeFileSync(path, json, "utf8");
   }
   static load(path, opts) {
     var json = fs.readFileSync(path, "utf8");
     var ws = cjson.parse(json);
     ws.opts = opts;
+    ws.functions = wsfuncs;
     return ws;
   }
 
@@ -149,14 +152,12 @@ class WebSheet {
     return result || (user === "admin" && this.opts.adminReads);
   }
   _canRead(user, name, row, col) {
-    // TODO: maybe accept a dep directly
     if (!this.output.permissions[user])
       this.output.permissions[user] = {};
     var userPerms = this.output.permissions[user];
     if (!userPerms[name])
       userPerms[name] = o.Table.permFromInputTable(this.input[name]);
     var table = userPerms[name];
-    debugger;
     var cell = table.cells[row][col];
     if (!cell)
       throw "Cell not found";

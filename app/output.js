@@ -32,28 +32,25 @@ class Table {
   censor(ws, user) {
     var copy = this.deepClone();
     _(copy.cells).each((row, rowIx) => _(row).each((cell,colName) => {
-      if (colName !== "_owner") {
-        if (cell.state === "unevaluated")
-          if (ws.opts.debug)
-            cell.string = !cell.data.error ? cell.data.ast.toString() : cell.data.toString();
-          else
-            cell.string = "[[unevaluated]]";
-        else if (cell.state === "error")
-          cell.string = ws.opts.debug ? cell.data.toString() : "[[error]]";
+      if (colName === "_owner")
+        return;
+      if (cell.state === "unevaluated")
+        if (ws.opts.debug)
+          cell.string = !cell.data.error ? cell.data.ast.toString() : cell.data.toString();
         else
-          if (ws.canRead(user, this.name, rowIx, colName)) {
-            debugger;
-            cell.string = cell.data.toCensoredString(ws, user);
-          }
-          else
-            cell.string = "[[censored]]";
-      }
+          cell.string = "[[unevaluated]]";
+      else if (cell.state === "error")
+        cell.string = ws.opts.debug ? cell.data.toString() : "[[error]]";
+      else
+        if (ws.canRead(user, this.name, rowIx, colName))
+          cell.string = cell.data.toCensoredString(ws, user);
+        else
+          cell.string = "[[censored]]";
     }));
     return copy;
   }
   static get _json() { return "OutputTable"; }
 }
-cjson.register(Table);
 exports.Table = Table;
 
 var fromInputRow = function(row) {
@@ -72,3 +69,6 @@ class Cell {
     this.data = ic;
   }
 }
+exports.Cell = Cell;
+
+_.each(exports, v => cjson.register(v));

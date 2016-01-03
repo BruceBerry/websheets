@@ -7,6 +7,7 @@ var upload = require("multer")({ dest: 'uploads/' });
 var favicon = require("serve-favicon");
 var debug = require("express-debug");
 var fibrous = require("fibrous");
+var _ = require("underscore");
 
 var fs = require("fs");
 var os = require("os");
@@ -20,6 +21,7 @@ var cjson = require("./app/cjson");
 var argv = argParser(process.argv.slice(2), {
   default: {
     port: 8000,
+    address: "localhost",
     saveFile: os.homedir() + "/.websheets",
     admin: true, // always logged in as admin
     newAccounts: true, // prevent creation of new accounts
@@ -31,6 +33,15 @@ var argv = argParser(process.argv.slice(2), {
 });
 console.log("Listening on port", argv.port);
 
+_.mixin({
+  // preserves the prototype chain
+  omitClone: function(obj, ...names) {
+    obj = obj.deepClone();
+    _.each(names, n => { delete obj[n]; });
+    return obj;
+  }
+});
+
 var ws;
 if (fs.existsSync(argv.saveFile))
   ws = WebSheet.load(argv.saveFile, argv);
@@ -39,12 +50,19 @@ else {
   ws = new WebSheet(argv);
 }
 
+var secret;
+try {
+  secret = fs.readFileSync(".secret", "utf8");
+} catch(e) {
+  console.log("You need a secret session key for production!");
+  secret = "websheets";
+}
 
 
 var app = express();
 app.use(favicon("static/favicon.ico"));
 app.use(cookieParser());
-app.use(session({secret: "TODO", resave: false, saveUninitialized: true}));
+app.use(session({secret, resave: false, saveUninitialized: true}));
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 app.use("/static", express.static("static"));
@@ -105,7 +123,7 @@ app.post("/user/logout", isUser, function(req, res) {
   res.end();
 });
 app.post("/user/create", function(req, res) {
-  if (!config.newAccounts)
+  if (!argv.newAccounts)
     return res.status(400).end("Account creation is disabled");
   if (ws.createUser(req.body.user, req.body.pass)) {
     console.log("created user", req.body.user);
@@ -163,7 +181,7 @@ app.post("/admin/save", isAdmin, function(req, res) {
   res.end();
 });
 app.get("/admin/download", isAdmin, function(req, res) {
-  var json = cjson.stringify(ws);
+  var json = cjson.stringify(_.omitClone(ws, "opts", "functions"));
   res.set('Content-Type', 'application/octet-stream');
   res.set('Content-Disposition', 'attachment;filename="ws.json"');
   res.send(json);
