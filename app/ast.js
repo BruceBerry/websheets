@@ -441,7 +441,13 @@ class Value {
     return this;
   }
   toString() { throw "abstract class"; }
-  toCensoredString() { return this.toString(); } // TODO: remove for safety
+  toCensoredString(ws, user) {
+    if (_.every(this.deps, d => ws.canRead(user, d.name, d.row, d.col)))
+      return this.toString();
+    else
+      return Value.censor;
+  }
+
   visitAll(f) {
     if (f(this) !== false)
       this.children().forEach(n => n.visitAll(f));
@@ -462,6 +468,7 @@ class Value {
   }
   asPerm() { throw `Permissions must return boolean values, not ${this.toString()}`; }
 }
+Value.censor = "##";
 
 class ScalarValue extends Value {
   constructor(value, deps) {
@@ -597,6 +604,14 @@ class ListValue extends Value {
   }
   children() { return this.values; }
   toString() { return "[" + this.values.map(x => x.toString()).join(", ") + "]"; }
+  // TODO: make toString a special case of toCensoredString that skip checks
+  toCensoredString(ws, user) {
+    if (_.every(this.deps, d => ws.canRead(user, d.name, d.row, d.col)))
+      return "[" + this.values.map(x => x.toCensoredString(ws, user)).join(", ") + "]";
+    else
+      return Value.censor;
+
+  }
   isList() { return true; }
   merge(l) { return new ListValue(this.values.concat(l.values)); }
   resolve(ws, user) {
@@ -613,6 +628,12 @@ class TupleValue extends Value {
   }
   children() { _.values(this.map); }
   toString() { return "{" + _.map(this.map, (v,k)=>k+":"+v.toString()).join(", ") + "}"; }
+  toCensoredString(ws, user) {
+    if (_.every(this.deps, d => ws.canRead(user, d.name, d.row, d.col)))
+      return "{" + _.map(this.map, (v,k)=>k+":"+v.toCensoredString(ws, user)).join(", ") + "}";
+    else
+      return Value.censor;
+  }
   isTuple() { return true; }
   merge(t) { return new TupleValue(Object.assign(this.map.deepClone(), t.map.deepClone())); }
   resolve(ws, user) {
@@ -623,7 +644,7 @@ class TupleValue extends Value {
 exports.TupleValue = TupleValue;
 
 class Dep {
-  constructor(name, col, row) {
+  constructor(name, row, col) {
     // this might change later if dependencies require
     // depending on an entire column, row etc
     this.name = name;

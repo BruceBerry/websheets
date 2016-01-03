@@ -156,6 +156,7 @@ class WebSheet {
     if (!userPerms[name])
       userPerms[name] = o.Table.permFromInputTable(this.input[name]);
     var table = userPerms[name];
+    debugger;
     var cell = table.cells[row][col];
     if (!cell)
       throw "Cell not found";

@@ -129,7 +129,7 @@ app.get("/user/list", isUser, function(req, res) {
 // 2. ADMIN/DEBUG
 app.post("/debug/eval", isUser, function(req, res) {
   var result = ws.evalString(req.session.user, req.body.src);
-  result.string = result.toString();
+  result.string = result.toCensoredString(ws, req.session.user);
   res.json(result);
 });
 app.get("/debug/keywords", isUser, function(req, res) {
