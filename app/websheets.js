@@ -14,8 +14,8 @@ class WebSheet {
     this.users = {admin: {user: "admin", pass: "pass"}};
     this.input = {};
     this.output = {values:{}, permissions:{}};
-    this.createTable("admin", "prova", "here", ["a", "bb", "ab"]);
     this.opts = opts;
+    this.createTable("admin", "prova", "here", ["a", "bb", "ab"]);
     this.functions = wsfuncs;
     this.input.prova.addRow("admin");
   }
@@ -208,6 +208,8 @@ class WebSheet {
     return this.output.values[name].cells[row][col].censor(this, user, name, row, col);
   }
   trigger(type, table, ...extra) {
+    if (this.opts.verbose)
+      console.log("trigger", type, table);
     // - createTable(name)
     // - deleteTable(name)
     // - addRow(name, row(optional))
@@ -236,7 +238,7 @@ class WebSheet {
     // a support graph, but i don't think i'm going to bother.
 
     // deleteTable, writePerm, writeRow
-    ws.purge();
+    this.purge();
   }
 }
 cjson.register(WebSheet);

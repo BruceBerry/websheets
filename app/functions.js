@@ -17,7 +17,7 @@ try {
 3) if you do I/O, do access control before.
 */
 module.exports = {
-  id: function(ws, user, x) { return x; },
+  id: function(ws, user, env, x) { return x; },
   concat: function(ws, user, ...args) {
     args = _.map(args, arg => {
       if (arg.isList())
@@ -29,14 +29,14 @@ module.exports = {
     });
     return new ast.ListValue(_.flatten(_.pluck(args, "values")));
   },
-  avg: function(ws, user, ...args) {
+  avg: function(ws, user, env, ...args) {
     if (args.length === 1 && args[0].isList()) // array input
       args = args[0].values;
     var sum = this.sum(ws, user, ...args);
     var len = args.length;
     return new ast.ScalarValue(sum/len).addDeps(args);
   },
-  sum: function(ws, user, ...args) {
+  sum: function(ws, user, env, ...args) {
     if (args.length === 1 && args[0].isList()) // array input
       args = args[0].values;
     var result = _.reduce(args, (acc, arg) => {
@@ -47,7 +47,7 @@ module.exports = {
     }, 0);
     return new ast.ScalarValue(result).addDeps(args);
   },
-  assert: function(ws, user, cond, msg, v) {
+  assert: function(ws, user, env, cond, msg, v) {
     cond = cond.resolve(ws, user);
     msg = msg.resolve(ws, user);
     if (typeof cond.value !== "boolean" && typeof msg.value !== "string")
@@ -57,7 +57,7 @@ module.exports = {
     return v ? v.addDeps(cond, msg) : new ast.ScalarValue(null).addDeps(cond, msg);
   },
   // TODO: errors should use toCensoredString, not toString
-  mail: function(ws, user, ...args) {
+  mail: function(ws, user, env, ...args) {
     var [recipient, subject, text] = _.map(args, v => v.toCensoredJSValue(ws, user));
     _.each([recipient, subject, text], v => {
       if (typeof v !== "string") throw `${v.toString()} is not a string`;
@@ -69,22 +69,38 @@ module.exports = {
       mg.sync.sendText(sender, recipient, subject, text);
     else
       console.log(`NEW MAIL\nFrom: ${sender}\nTo: ${recipient}\nSubject: ${subject}\n\n${text}\n`);
-    return new ast.ScalarValue(true).addDeps(args);
+    return new ast.ScalarValue(null).addDeps(args);
   },
-  FIX: function(ws, user, v) {
+  FIX: function(ws, user, env, v) {
     // remove the re-calculate effect of its dependencies, forcing a value to
     // never be re-evaluated. this is not privileged.
-    throw "Fix not implemented";
+    v = v.resolve(ws, user);
+    v.visitAll(n => {
+      _.each(n.deps, d => { d.recalculate = false; });
+    });
+    return v;
   },
-  TRUST: function(ws, user, v) {
+  TRUST: function(ws, user, env, v) {
     // remove the canRead effect of its dependencies, basically re-publishing
     // the object as yours. must be able to read all its dependencies to assume
     // ownership, either as the user evaluating it or as the cell
     // owner.
-    throw "Declassification not implemented";
+    // TODO: check here or at runtime?
+    try {
+      var {name: {tableName: value},
+           row: {rowIndex: value},
+           col: {colName: value}
+          } = env;
+    } catch (e) {
+      throw `Cannot use TRUST in a non-cell context`; 
+    }
+    return v.addDeps(new ast.DeclDep(user, name, row, col));
   },
-  AFTER: function(ws, user, v) {
+  AFTER: function(ws, user, env, v) {
     // support unix epoch & Date friendly format
-    throw "Time triggers not supported";
+    var tdep = new ast.TimeDep(v.value);
+    if (isNaN(tdep.date.getYear()))
+      throw `Invalid date format: ${v.toString()}`;
+    return new ast.ScalarValue(null).addDeps(tdep);
   }
 };

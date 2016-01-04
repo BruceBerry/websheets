@@ -430,8 +430,8 @@ exports.Call = class Call extends Node {
   eval(ws, user, env) {
     var args = _.map(this.args, arg => arg.eval(ws, user, env));
     if (ws.functions[this.name]) {
-      // id, concat, avg, sum, trust, after
-      return ws.functions[this.name](ws, user, ...args);
+      // env is passed for privileged functions like trust
+      return ws.functions[this.name](ws, user, env, ...args);
       // builtin functions do not automatically inherit argument deps.
     } else if (ws.scripts[this.name]) {
       var script = ws.scripts[this.name];
@@ -627,7 +627,7 @@ class TableValue extends Value {
   toCensoredJSValue(ws, user) {
     this.resolve(ws, user).toCensoredJSValue(ws, user);
   }
-  children() { return this.resolve().children(); }
+  children() { console.warn("You probably want to resolve first"); return []; }
   isTable() { return true; }
 }
 exports.TableValue = TableValue;
@@ -669,7 +669,7 @@ class TupleValue extends Value {
     super("Tuple", deps);
     this.map = map;
   }
-  children() { _.values(this.map); }
+  children() { return _.values(this.map); }
   toString() { return "{" + _.map(this.map, (v,k)=>k+":"+v.toString()).join(", ") + "}"; }
   toCensoredString(ws, user) {
     if (_.every(this.deps, d => ws.canRead(user, d.name, d.row, d.col)))
@@ -696,12 +696,13 @@ class TupleValue extends Value {
 exports.TupleValue = TupleValue;
 
 class Dep {
-  constructor(name, row, col) {
+  constructor(name, row, col, rec=true) {
     // this might change later if dependencies require
     // depending on an entire column, row etc
     this.name = name;
     this.col = col;
     this.row = row;
+    this.recalculate = rec;
   }
   toString() { return `${this.name}.${this.col}.${this.row}`; }
   canRead(ws, user) {
@@ -710,5 +711,44 @@ class Dep {
   }
 }
 exports.Dep = Dep;
+
+// a dependency only for recalculation purposes, represents a dependence on
+// addRow and delRow because you touched a cell inside a loop on all columns.
+class RowDep extends Dep {
+  constructor(name, col) {
+    super(name, "*", col);
+  }
+  canRead(ws, user) {
+    return true;
+  }
+}
+exports.RowDep = RowDep;
+
+// also only for recalculation, represents a dependency
+// created by a call to AFTER
+class TimeDep extends Dep {
+  constructor(date) {
+    super("///", "///", "///");
+    this.date = new Date(date);
+  }
+  toString() { return "AFTER " + this.date.toString(); }
+  canRead() { return true; }
+}
+exports.TimeDep = TimeDep;
+
+// declassification by a user. take the dependencies of the cell referenced by
+// this dep and exempt them from the canRead check of the current cell if the
+// cell belongs to the same user of this dep. must be examine manually
+// (canRead just returns true). also this is unsafe until we have hierarchical
+// dependencies.
+class DeclDep extends Dep {
+  constructor(user, name, row, col) {
+    super(name, row, col);
+    this.user = user;
+  }
+  toString() { return `${this.user}!${this.name}.${this.row}.${this.col}`; }
+  canRead() { return true; }
+}
+exports.DeclDep = DeclDep;
 
 _.each(exports, v => cjson.register(v));
