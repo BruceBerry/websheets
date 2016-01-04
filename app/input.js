@@ -118,12 +118,21 @@ class Expr {
 cjson.register(Expr);
 exports.Expr = Expr;
 
+// null => true
+var defaultPerm = function(p) {
+  if (p.src !== "")
+    return p;
+  return new Expr("true", p.cell);
+};
+exports.defaultPerm = defaultPerm;
+
+// short circuit eval if one of them is true
 exports.combinePerms = function(p1, p2) {
-  if (p1.src === "" && p2.src === "")
-    return new Expr("true", p1.cell);
-  if (p1.src === "" || p2.error)
+  p1 = defaultPerm(p1);
+  p2 = defaultPerm(p2);
+  if (p1.src === "true" || p2.error)
     return p2.deepClone();
-  if (p2.src === "" || p1.error)
+  if (p2.src === "true" || p1.error)
     return p1.deepClone();
   return new Expr(p1.src + " && " + p2.src, p1.cell, new ast.Binary("&&", p1.ast, p2.ast, ast.Loc.fakeLoc()));
 };

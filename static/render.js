@@ -22,16 +22,27 @@ function interact(table, mode) {
     var $this = $(this);
     if ($this.data("editing"))
       return;
+    var censored = this.dataset.censored;
+    if (censored)
+      $this.removeClass("censored-true");
     // use dataset instead of jquery b/c of autoconversion
-    $("code", this).html(this.dataset.src);
+    $("code", this).html(censored ? "" : this.dataset.src);
   });
   $(sel).on("mouseleave", function() {
     var $this = $(this);
     if ($this.data("editing"))
       return;
     var f = mode === "input" ? pwf : s => s;
+    if (this.dataset.censored)
+      $this.addClass("censored-true");
     $this.html("<code contenteditable=\"true\">" + f(this.dataset.src) + "</code>");
     $this.css("background-color", "");
+  });
+  // blur never fires if you click somewhere other than
+  // another cell, so don't do that :-) use esc to cancel
+  $(sel + " code").blur(function() {
+    $(this).parent().data("editing", false);
+    $(this).parent().trigger("mouseleave");
   });
   $(sel).on("keydown", function(e) {
     var $this = $(this);
@@ -61,7 +72,7 @@ function interact(table, mode) {
     } else if (!$this.data("editing")) {
       $this.data("editing", true);
       var width = $this.css("width");
-      $this.css("background-color", "white");
+      // $this.css("background-color", "white");
       $this.css("max-width", width);
       $this.css("min-width", width);
       $this.css("width", width);

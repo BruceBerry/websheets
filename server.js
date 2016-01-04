@@ -284,7 +284,7 @@ app.get("/table/:name/:row/:col", util, isUser, function(req, res) {
 app.get("/table/:name/:row/:col/download", util, isUser, function(req, res) {
   var {name, row, col} = req.params;
   var cell = ws.getCell(req.session.user, name, row, col);
-  // TODO: test for failure and retur error page
+  // TODO: test for failure and return error page
   // TODO: supply base64 field for binary data
   if (cell.base64) {
     var buf = new Buffer(cell.base64, "base64");

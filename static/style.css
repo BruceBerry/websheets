@@ -73,6 +73,11 @@ code .func {
   background-color: #FFFFCA;
 }
 
+.censored-true code {
+   color: transparent !important;
+   text-shadow: 0 0 3px rgba(0,0,0,0.8);
+}
+
 .invisible {
   display: none;
 }

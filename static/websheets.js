@@ -40,6 +40,9 @@ Handlebars.registerHelper({
   },
   or: function (v1, v2) {
       return v1 || v2;
+  },
+  ifCensored: function(expr) {
+    return expr.censored ? "censored" : "";
   }
 });
 

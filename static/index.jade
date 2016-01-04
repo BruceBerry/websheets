@@ -246,7 +246,7 @@ block content
           </td>
           {{#each this}}
           {{#if (neq this.src undefined)}}
-          <td class="editable" data-col="{{@key}}" data-src="{{this.src}}">
+          <td class="editable censored-{{this.censored}}" data-col="{{@key}}" data-src="{{this.src}}" data-censored="{{this.censored}}">
             <code contenteditable="true">{{{pcode this.src}}}</code>
           </td>
           {{/if}}
@@ -284,7 +284,7 @@ block content
           </td>
           {{#each this}}
           {{#if (neq this.state undefined)}}
-          <td class="editable wf-{{this.state}}" data-col="{{@key}}" data-src="{{this.string}}" data-state="{{this.state}}">
+          <td class="editable wf-{{this.state}} censored-{{this.censored}}" data-col="{{@key}}" data-src="{{this.string}}" data-state="{{this.state}}" data-censored="{{this.censored}}">
             <code contenteditable="true">{{this.string}}</code>
           </td>
           {{/if}}

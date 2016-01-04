@@ -441,8 +441,6 @@ exports.Call = class Call extends Node {
       //  whitelist host for bash)
       // * side effects: all cells written through the json api have input deps.
       // with the json api are deps
-      // TODO: the api currently does not expose value-only, we need that.
-      // it seems like here we do
       if (script.type === "js") {
         throw "JS support not implemented";
       } else if (script.type === "bash") {

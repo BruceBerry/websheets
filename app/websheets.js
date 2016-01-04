@@ -17,6 +17,7 @@ class WebSheet {
     this.opts = opts;
     this.createTable("admin", "prova", "here", ["a", "bb", "ab"]);
     this.functions = wsfuncs;
+    this.scripts = {};
     this.input.prova.addRow("admin");
   }
 
@@ -65,7 +66,7 @@ class WebSheet {
     return {
       tables: _(this.input).keys(),
       columns: _.chain(this.input).pluck("columns").flatten().value(),
-      functions: [] // TODO
+      functions: _.keys(this.functions).concat(_.keys(this.scripts));
     };
   }
   createTable(user, name, desc, columns) {
@@ -74,27 +75,60 @@ class WebSheet {
     return true;
   }
   getInputTable(user, name) {
-    // server performed access control
-    // TODO: censoring for the input table as well,
-    // the user should not be able to see everything
-    if (!this.input[name])
-      throw `Table ${name} does not exist`;
+    // server already performed access control
     return this.input[name].export(this, user);
   }
   addRow(user, name, row) {
-    // TODO: evaluate add row permission
+    var env = this.mkTableEnv(name, user);
+    var expr = this.input[name].perms.add.row;
+    if (expr.error)
+      throw `Cannot add row, error in expr ${expr.error.toString()}`;
+    var result = i.defaultPerm(expr).ast.eval(this, user, env).resolve(this, user);
+    // not using allPerms() because nested perms would imply a list or tuple which fail asPerm
+    var allDeps = _.every(result.deps, d => d.canRead(this, user));
+    if (!result.asPerm() || !allDeps)
+      throw `You are not authorized add a new row to ${name}`;
     this.input[name].addRow(user, row);
     this.trigger("addRow", name, row);
   }
   deleteRow(user, name, row) {
-    // TODO: evaluate del row permission
+    var env = this.mkTableEnv(name, user);
+    var expr = this.input[name].perms.del.row;
+    if (expr.error)
+      throw `Cannot delete row, error in expr ${expr.error.toString()}`;
+    var result = i.defaultPerm(expr).ast.eval(this, user, env).resolve(this, user);
+    var allDeps = _.every(result.deps, d => d.canRead(this, user));
+    if (!result.asPerm() || !allDeps)
+      throw `You are not authorized to delete a row from ${name}`;
     this.input[name].deleteRow(row);
     this.trigger("deleteRow", name, row);
   }
   writeCell(user, name, row, column, src) {
-    // TODO: evaluate write permission (add newVal and oldVal to env)
     // TODO: update ownership if cells will have owners
-    this.input[name].writeCell(row, column, src);
+    var table = this.input[name];
+    debugger;
+    var oldExpr = table.cells[row][column];
+    var newExpr = new i.Expr(src, oldExpr.cell);
+    if (newExpr.error)
+      throw `Cannot write new cell w/ syntax error: ${newExpr.error.toString()}`;
+    var env = this.mkCellEnv(name, row, column, user);
+    var newVal;
+    try {
+      newVal = newExpr.ast.eval(this, user, env.deepClone());
+    } catch (e) {
+      throw `Runtime error evaluating new expression`;
+    }
+    env.newVal = newVal;
+    var permExpr = table.perms.write[column];
+    var rowPermExpr = table.perms.write.row;
+    var pExpr = i.combinePerms(permExpr, rowPermExpr);
+    if (pExpr.error)
+      throw `Cannot write cell, error in expr ${pExpr.error.toString()}`;
+    var result = pExpr.ast.eval(this, user, env).resolve(this, user);
+    var allDeps = _.every(result.deps, d => d.canRead(this, user));
+    if (!result.asPerm() || !allDeps)
+      throw `You are not authorized to write ${src} to ${name}.${row}.${column}`;
+    table.writeCell(row, column, src);
     this.trigger("write", name, row, column);
   }
   getOutputTable(user, name) {
@@ -111,7 +145,8 @@ class WebSheet {
           } catch(e) {
             console.log(e.toString());
           }
-        })});
+        });
+      });
     }
     if (!this.output.values[name])
       this.output.values[name] = o.Table.fromInputTable(this.input[name]);
@@ -123,12 +158,21 @@ class WebSheet {
       throw expr.error;
     return expr.ast.eval(this, user, {}).resolve(this);
   }
-  mkCellEnv(name, row, col, user) {
+  mkTableEnv(name, user) {
     var table = this.input[name];
     var env = {
       table: new ast.TableValue(name),
       tableName: new ast.ScalarValue(name),
       tableOwner: new ast.ScalarValue(table.owner),
+    };
+    if (user)
+      env.user = new ast.ScalarValue(user);
+    return env;
+  }
+  mkCellEnv(name, row, col, user) {
+    var table = this.input[name];
+    var env = this.mkTableEnv(name, user);
+    Object.assign(env, {
       row: new ast.TableValue(name, row),
       rowIndex: new ast.ScalarValue(row),
       rowOwner: new ast.ScalarValue(table.cells[row]._owner),
@@ -136,10 +180,8 @@ class WebSheet {
       colName: new ast.ScalarValue(col),
       cell: new ast.TableValue(name, row, col),
       // owner: TODO: cell owner?
-    };
+    });
     _.each(table.columns, c => { env[c] = new ast.TableValue(name, row, c); });
-    if (user)
-      env.user = new ast.ScalarValue(user);
     return env;
   }
   import(user, filename) {
