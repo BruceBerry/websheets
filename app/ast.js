@@ -19,7 +19,7 @@ class Loc {
     return `${this.cell}:${this.start}-${this.end}`;
   }
   static fakeLoc() {
-    return new Loc({first_column: -1, last_column: 1});
+    return new Loc({first_column: -1, last_column: -1});
   }
 }
 exports.Loc = Loc;
@@ -205,6 +205,8 @@ exports.IfThenElse = class IfThenElse extends Node {
   }
 };
 
+// TODO: add a depth argument to resolve so you don't need to go too deep if not necessary
+// (e.g. i only need to know if the table ref is a list of tuples, then depth=2)
 exports.Select = class Select extends Node {
   constructor(l, r, location) {
     super("Select", location);
@@ -462,13 +464,9 @@ class Value {
     return this;
   }
   toString() { throw "abstract class"; }
-  toCensoredString(ws, user) {
-    if (_.every(this.deps, d => ws.canRead(user, d.name, d.row, d.col)))
-      return this.toString();
-    else
-      return Value.censor;
-  }
-
+  toCensoredString(ws, user) { throw "abstract class"; }
+  toJSValue(ws, user) { throw "abstract class"; } // pass ws and user b/c we need resolution
+  toCensoredJSValue(ws, user) { throw "abstract class"; }
   visitAll(f) {
     if (f(this) !== false)
       this.children().forEach(n => n.visitAll(f));
@@ -490,6 +488,7 @@ class Value {
   asPerm() { throw `Permissions must return boolean values, not ${this.toString()}`; }
 }
 Value.censor = "##";
+exports.Value = Value;
 
 class ScalarValue extends Value {
   constructor(value, deps) {
@@ -505,6 +504,17 @@ class ScalarValue extends Value {
     if (typeof this.value === "string")
       return `"${this.value}"`;
     return this.value.toString();
+  }
+  toCensoredString(ws, user) {
+    if (_.every(this.deps, d => d.canRead(ws, user)))
+      return this.toString();
+    else
+      return '"' + Value.censor + '"';
+  }
+  toJSValue(ws, user) { return this.value; }
+  toCensoredJSValue(ws, user) {
+    if (_.every(this.deps, d => d.canRead(ws, user)))
+      return this.value;
   }
   asPerm() {
     if (typeof this.value !== "boolean")
@@ -613,6 +623,10 @@ class TableValue extends Value {
     }
   }
   toString() { return `{{${this.name}.${this.row}.${this.col}}}`; }
+  toJSValue(ws, user) { return this.resolve(ws, user).toJSValue(ws, user); }
+  toCensoredJSValue(ws, user) {
+    this.resolve(ws, user).toCensoredJSValue(ws, user);
+  }
   children() { return this.resolve().children(); }
   isTable() { return true; }
 }
@@ -631,7 +645,15 @@ class ListValue extends Value {
       return "[" + this.values.map(x => x.toCensoredString(ws, user)).join(", ") + "]";
     else
       return Value.censor;
-
+  }
+  toJSValue(ws, user) {
+    return _.map(this.values, v => v.toJSValue(ws, user));
+  }
+  toCensoredJSValue(ws, user) {
+    if (_.every(this.deps, d => d.canRead(ws, user)))
+      return _.map(this.values, v => v.toCensoredJSValue(ws, user));
+    else
+      return Value.censor;
   }
   isList() { return true; }
   merge(l) { return new ListValue(this.values.concat(l.values)); }
@@ -655,6 +677,15 @@ class TupleValue extends Value {
     else
       return Value.censor;
   }
+  toJSValue(ws, user) {
+    return _.mapObject(this.map, v => v.toJSValue(ws, user));
+  }
+  toCensoredJSValue(ws, user) {
+    if (_.every(this.deps, d => d.canRead(ws, user)))
+      return _.mapObject(this.map, v => v.toCensoredJSValue(ws, user));
+    else
+      return Value.censor;
+  }
   isTuple() { return true; }
   merge(t) { return new TupleValue(Object.assign(this.map.deepClone(), t.map.deepClone())); }
   resolve(ws, user) {
@@ -673,6 +704,10 @@ class Dep {
     this.row = row;
   }
   toString() { return `${this.name}.${this.col}.${this.row}`; }
+  canRead(ws, user) {
+    // subclasses (e.g. decl or time) might just return true here
+    return ws.canRead(user, this.name, this.row, this.col);
+  }
 }
 exports.Dep = Dep;
 

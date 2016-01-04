@@ -27,6 +27,7 @@ exports.import = function(ws, user, filename) {
     if (ws.input[table.name])
       throw `Table ${table.name} already exists`;
     ws.input[table.name] = table;
+    ws.trigger("createTable", table.name);
   });
 };
 

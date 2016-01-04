@@ -31,6 +31,7 @@ var argv = argParser(process.argv.slice(2), {
                   // output values are censored properly, not input expressions
     verbose: true, // print evaluation info
     adminReads: false, // does canRead always return true for admin (still evaluates)
+    sendMail: false, // does not attempt to use mailgun, only logs new emails
   }
 });
 console.log("Listening on port", argv.port);
@@ -225,6 +226,7 @@ app.post("/table/create", isUser, function(req,res) {
 });
 app.post("/table/:name/delete", util, isOwnerOrAdmin, function(req, res) {
   delete ws.input[req.params.name];
+  ws.trigger("deleteTable", req.params.name);
   res.end();
 });
 
@@ -244,13 +246,13 @@ app.post("/table/:name/edit", util, isUser, function(req, res) {
     isOwnerOrAdmin(req, res, function() {
       ws.input[name].perms[perm][column] =
         new i.Expr(src, `${name}.${perm}.${column}`);
-      ws.purge();
+      ws.trigger("writePerm", name, perm, column);
       res.end();
     });
   } else if (column === "_owner") {
     isAdmin(req, res, function () {
-      ws.input[name].cells[row][column] = src;
-      ws.purge();
+      ws.input[name].cells[row]._owner = src;
+      ws.trigger("writeOwner", name, row);
       res.end();
     });
   } else {

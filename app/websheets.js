@@ -70,7 +70,7 @@ class WebSheet {
   }
   createTable(user, name, desc, columns) {
     this.input[name] = new i.Table(name, desc, user, columns);
-    this.purge();
+    this.trigger("createTable", name);
     return true;
   }
   getInputTable(user, name) {
@@ -84,18 +84,18 @@ class WebSheet {
   addRow(user, name, row) {
     // TODO: evaluate add row permission
     this.input[name].addRow(user, row);
-    this.purge();
+    this.trigger("addRow", name, row);
   }
   deleteRow(user, name, row) {
     // TODO: evaluate del row permission
     this.input[name].deleteRow(row);
-    this.purge();
+    this.trigger("deleteRow", name, row);
   }
   writeCell(user, name, row, column, src) {
     // TODO: evaluate write permission (add newVal and oldVal to env)
     // TODO: update ownership if cells will have owners
     this.input[name].writeCell(row, column, src);
-    this.purge();
+    this.trigger("write", name, row, column);
   }
   getOutputTable(user, name) {
     // eval them separately, otherwise the first cell error terminates the evaluation
@@ -144,8 +144,6 @@ class WebSheet {
   }
   import(user, filename) {
     importer.import(this, user, filename);
-    console.log("Import completed.");
-    this.purge();
   }
   canRead(user, name, row, col) {
     var result = this._canRead(user, name, row, col);
@@ -208,6 +206,37 @@ class WebSheet {
     if (!this.output.values[name])
       this.output.values[name] = o.Table.fromInputTable(this.input[name]);
     return this.output.values[name].cells[row][col].censor(this, user, name, row, col);
+  }
+  trigger(type, table, ...extra) {
+    // - createTable(name)
+    // - deleteTable(name)
+    // - addRow(name, row(optional))
+    // - deleteRow(name, row)
+    // - write(name, row, col) // TODO: supply previous value/deps?
+    // - writePerm(name, perm, col)
+    // - writeOwner(name, row)
+
+    // in strict semantics, evaluating an unevaluated cell doesn't trigger
+    // anything, because cells that depend on it by definition have not been
+    // evaluated yet and are queued for evaluation. only re-evaluating cells
+    // can fire further triggers, and only if the cell has re-evaluated with a
+    // different value.
+
+    // however, so far we've been working with lazy semantics, it would be
+    // nice to stick to them: writing a cell only marks all its dependencies
+    // as stale, but does not recalculate them. requesting a stale dependency
+    // forces re-evaluation, but if the value has not changed, then its
+    // dependents need to be informed, because they might not be stale after
+    // all. how would they know that *all* their dependencies have reported
+    // having made no changes? return a value all the way? what is the name of
+    // that pattern where you record the number of changes and if it's not the
+    // current one you know it hasn't changed? generation?
+
+    // thi stuff will be very slow without inverting the dependency graph into
+    // a support graph, but i don't think i'm going to bother.
+
+    // deleteTable, writePerm, writeRow
+    ws.purge();
   }
 }
 cjson.register(WebSheet);

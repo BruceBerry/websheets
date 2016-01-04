@@ -1,9 +1,20 @@
-var ast = require("./ast");
 var _ = require("underscore");
+var fs = require("fs");
+var Mailgun = require('mailgun').Mailgun;
+
+var ast = require("./ast");
+
+var mg;
+try {
+  mg = new Mailgun(fs.readFileSync(".mailgun", "utf-8"));
+} catch (e) {
+  console.log("You need a mailgun API key to send emails. Switching to logging mode.");
+}
 
 /*
 1) tables are not resolved automatically, you need to do it if necessary
 2) you also need to do your own dependency management
+3) if you do I/O, do access control before.
 */
 module.exports = {
   id: function(ws, user, x) { return x; },
@@ -11,8 +22,7 @@ module.exports = {
     args = _.map(args, arg => {
       if (arg.isList())
         return arg;
-      if (arg.isTable())
-        arg = arg.resolve(ws, user);
+      arg = arg.resolve(ws, user);
       if (!arg.isList())
         throw `Cannot concat ${arg.toString()}`;
       return arg;
@@ -30,19 +40,51 @@ module.exports = {
     if (args.length === 1 && args[0].isList()) // array input
       args = args[0].values;
     var result = _.reduce(args, (acc, arg) => {
-      if (arg.isTable())
-        arg.resolve(ws, user);
-      if (!typeof arg.value === "number")
+      arg.resolve(ws, user);
+      if (typeof arg.value !== "number")
         throw `Cannot sum ${arg.toString()}`;
       return acc + arg.value;
     }, 0);
     return new ast.ScalarValue(result).addDeps(args);
   },
+  assert: function(ws, user, cond, msg, v) {
+    cond = cond.resolve(ws, user);
+    msg = msg.resolve(ws, user);
+    if (typeof cond.value !== "boolean" && typeof msg.value !== "string")
+      throw "Assert called with wrong types";
+    if (cond.value === false)
+      throw msg.value;
+    return v ? v.addDeps(cond, msg) : new ast.ScalarValue(null).addDeps(cond, msg);
+  },
+  // TODO: errors should use toCensoredString, not toString
+  mail: function(ws, user, ...args) {
+    var [recipient, subject, text] = _.map(args, v => v.toCensoredJSValue(ws, user));
+    _.each([recipient, subject, text], v => {
+      if (typeof v !== "string") throw `${v.toString()} is not a string`;
+    });
+    if (recipient === ast.Value.censor)
+      throw "Cannot read recipient";
+    var sender = "websheets@sandbox49351fdc926b4effb0a597a38a15bf33.mailgun.org";
+    if (mg && ws.opts.sendMail)
+      mg.sync.sendText(sender, recipient, subject, text);
+    else
+      console.log(`NEW MAIL\nFrom: ${sender}\nTo: ${recipient}\nSubject: ${subject}\n\n${text}\n`);
+    return new ast.ScalarValue(true).addDeps(args);
+  },
+  FIX: function(ws, user, v) {
+    // remove the re-calculate effect of its dependencies, forcing a value to
+    // never be re-evaluated. this is not privileged.
+    throw "Fix not implemented";
+  },
   TRUST: function(ws, user, v) {
+    // remove the canRead effect of its dependencies, basically re-publishing
+    // the object as yours. must be able to read all its dependencies to assume
+    // ownership, either as the user evaluating it or as the cell
+    // owner.
     throw "Declassification not implemented";
   },
-  after: function(ws, user, v) {
+  AFTER: function(ws, user, v) {
     // support unix epoch & Date friendly format
     throw "Time triggers not supported";
   }
-}
+};
