@@ -129,7 +129,6 @@ exports.Binary = class Binary extends Node {
     if (l.isList() || r.isList())
       throw `Unsupported operand ${this.op} for ${l.toString()} or ${r.toString()}`;
     var newVal = eval("l.value"+this.op+"r.value");
-    // TODO: we might need to force conversion of boolean operators
     if (typeof newVal === "number" && isNaN(newVal))
       throw `Not a number`;
     if (newVal === undefined)
@@ -197,9 +196,8 @@ exports.IfThenElse = class IfThenElse extends Node {
   children() { return [this.cond, this.then, this.else]; }
   eval(ws, user, env) {
     var cond = this.cond.eval(ws, user, env).resolve(ws, user);
-    // TODO: error w/ expr or value?
     if (typeof cond.value !== "boolean")
-      throw "Unsupported if condition for " + cond.toString();
+      throw `Unsupported if condition for ${cond.toString()}`;
     if (cond.value === "true")
       return this.then.eval(ws, user, env).addDeps(cond);
     else
@@ -430,7 +428,6 @@ exports.Call = class Call extends Node {
   eval(ws, user, env) {
     var args = _.map(this.args, arg => arg.eval(ws, user, env));
     if (ws.functions[this.name]) {
-      // TODO: row deps (e.g. variable of a loop) and declassification deps
       // id, concat, avg, sum, trust, after
       return ws.functions[this.name](ws, user, ...args);
       // builtin functions do not automatically inherit argument deps.

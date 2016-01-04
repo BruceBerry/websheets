@@ -73,13 +73,13 @@ class WebSheet {
     this.purge();
     return true;
   }
-  getInputTable(name) {
+  getInputTable(user, name) {
     // server performed access control
     // TODO: censoring for the input table as well,
     // the user should not be able to see everything
     if (!this.input[name])
       throw `Table ${name} does not exist`;
-    return cjson.stringify(this.input[name].export());
+    return this.input[name].export(this, user);
   }
   addRow(user, name, row) {
     // TODO: evaluate add row permission
@@ -115,7 +115,7 @@ class WebSheet {
     }
     if (!this.output.values[name])
       this.output.values[name] = o.Table.fromInputTable(this.input[name]);
-    return cjson.stringify(this.output.values[name].censor(this, user));
+    return this.output.values[name].censor(this, user);
   }
   evalString(user, src) {
     var expr = new i.Expr(src, "fromString");
@@ -197,7 +197,6 @@ class WebSheet {
     }
   }
   getCell(user, name, row, col) {
-    // TODO: separate table.censor and cell.censor so you can censor only one here
     if (!this.input[name])
       throw `Table ${name} does not exist`;
     if (this.opts.autoEval)
@@ -208,8 +207,7 @@ class WebSheet {
       }
     if (!this.output.values[name])
       this.output.values[name] = o.Table.fromInputTable(this.input[name]);
-    // TODO: move all these stringify to the server?
-    return cjson.stringify(this.output.values[name].censor(this, user).cells[row][col]);
+    return this.output.values[name].cells[row][col].censor(this, user, name, row, col);
   }
 }
 cjson.register(WebSheet);

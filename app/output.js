@@ -31,22 +31,13 @@ class Table {
   }
   censor(ws, user) {
     var copy = this.deepClone();
-    _(copy.cells).each((row, rowIx) => _(row).each((cell,colName) => {
-      if (colName === "_owner")
-        return;
-      if (cell.state === "unevaluated")
-        if (ws.opts.debug)
-          cell.string = !cell.data.error ? cell.data.ast.toString() : cell.data.toString();
-        else
-          cell.string = "[[unevaluated]]";
-      else if (cell.state === "error")
-        cell.string = ws.opts.debug ? cell.data.toString() : "[[error]]";
-      else
-        if (ws.canRead(user, this.name, rowIx, colName))
-          cell.string = cell.data.toCensoredString(ws, user);
-        else
-          cell.string = "[[censored]]";
-    }));
+    _(copy.cells).map((row, rowIx) =>
+      _(row).mapObject((cell,colName) => {
+        if (colName === "_owner")
+          return;
+        return cell.censor(ws, user, this.name, rowIx, colName);
+      })
+    );
     return copy;
   }
   static get _json() { return "OutputTable"; }
@@ -67,6 +58,25 @@ class Cell {
     // unevaluated => evaluating => evaluated (error)
     this.state = "unevaluated";
     this.data = ic;
+  }
+  censor(ws, user, name, row, col) {
+    if (this.state === "unevaluated") {
+      delete this.data.ast;
+      if (ws.opts.debug)
+        this.string = !this.data.error ? this.data.ast.toString() : this.data.toString();
+      else
+        this.string = "[[unevaluated]]";
+    } else if (this.state === "error")
+      this.string = ws.opts.debug ? this.data.toString() : "[[error]]";
+    else
+      if (ws.canRead(user, name, row, col))
+        this.string = this.data.toCensoredString(ws, user);
+      else {
+        delete this.data;
+        this.string = "[[censored]]";
+        this.censored = true;
+      }
+    return this;
   }
 }
 exports.Cell = Cell;

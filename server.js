@@ -8,6 +8,7 @@ var favicon = require("serve-favicon");
 var debug = require("express-debug");
 var fibrous = require("fibrous");
 var _ = require("underscore");
+var Magic = require('mmmagic').Magic;
 
 var fs = require("fs");
 var os = require("os");
@@ -26,7 +27,8 @@ var argv = argParser(process.argv.slice(2), {
     admin: true, // always logged in as admin
     newAccounts: true, // prevent creation of new accounts
     autoEval: true, // should viewing an output table trigger evaluation of the whole table?
-    debug: true, // output table json responses leak debug information
+    debug: false, // if true, json responses leak debug information, and only
+                  // output values are censored properly, not input expressions
     verbose: true, // print evaluation info
     adminReads: false, // does canRead always return true for admin (still evaluates)
   }
@@ -67,6 +69,27 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 app.use("/static", express.static("static"));
 app.use(fibrous.middleware);
+
+// automatic sanity checks for input values
+var util = function(req, res, next) {
+  var ps = req.params;
+  if (ps.name)
+    if (!ws.input[ps.name])
+      throw `Table ${ps.name} does not exist`;
+    else
+      req.table = ws.input[ps.name];
+  if (ps.row) {
+    var num = Number(ps.row);
+    if (isNaN(num)) throw "Row must be an integer";
+    ps.row = num;
+  }
+  if (ps.row && ps.col)
+    if (!req.table.cells[ps.row] || !req.table.cells[ps.row][ps.col])
+      throw `Cell ${ps.name}.${ps.row}.${ps.col} does not exists`;
+    else
+      req.cell = req.table.cells[ps.row][ps.col];
+  next();
+};
 
 
 
@@ -200,24 +223,24 @@ app.post("/table/create", isUser, function(req,res) {
       req.body.columns.split(",").map(s=>s.trim()));
     res.end();
 });
-app.post("/table/:name/delete", isOwnerOrAdmin, function(req, res) {
+app.post("/table/:name/delete", util, isOwnerOrAdmin, function(req, res) {
   delete ws.input[req.params.name];
   res.end();
 });
 
-app.get("/table/:name/input", isOwnerOrAdmin, function(req, res) {
-  res.type("json").end(ws.getInputTable(req.params.name));
+app.get("/table/:name/input", util, isOwnerOrAdmin, function(req, res) {
+  res.type("json").end(cjson.stringify(ws.getInputTable(req.session.user, req.params.name)));
 });
-app.get("/table/:name/output", isUser, function(req, res) {
-  res.type("json").end(ws.getOutputTable(req.session.user, req.params.name));
+app.get("/table/:name/output", util, isUser, function(req, res) {
+  res.type("json").end(cjson.stringify(ws.getOutputTable(req.session.user, req.params.name)));
 });
-app.post("/table/:name/edit", isUser, function(req, res) {
+app.post("/table/:name/edit", util, isUser, function(req, res) {
   var name = req.params.name;
   var {perm, column, src, row} = req.body;
   row = Number(row);
+  if (isNaN(row)) throw "NaN";
   // double as both privileged and normal cell editing
   if (perm) {
-    // TODO: since this is not admin-only, it needs some checking
     isOwnerOrAdmin(req, res, function() {
       ws.input[name].perms[perm][column] =
         new i.Expr(src, `${name}.${perm}.${column}`);
@@ -235,11 +258,11 @@ app.post("/table/:name/edit", isUser, function(req, res) {
     res.end();
   }
 });
-app.post("/table/:name/addrow", isUser, function(req, res) {
+app.post("/table/:name/addrow", util, isUser, function(req, res) {
   ws.addRow(req.session.user, req.params.name, req.body.row);
   res.end();
 });
-app.post("/table/:name/deleterow", isUser, function(req, res) {
+app.post("/table/:name/deleterow", util, isUser, function(req, res) {
   ws.deleteRow(req.session.user, req.params.name, req.body.row);
   res.end();
 });
@@ -251,10 +274,25 @@ app.post("/table/import", isUser, upload.single("xls"), fibrous.middleware, func
     fs.unlink(req.file.path);
   }
 });
-app.get("/table/:name/:row/:col", isUser, function(req, res) {
-  var num = Number(req.params.row);
-  if (isNaN(num)) throw "NaN";
-  res.type("json").end(ws.getCell(req.session.user, req.params.name, num, req.params.col));
+app.get("/table/:name/:row/:col", util, isUser, function(req, res) {
+  var {name, row, col} = req.params;
+  var cell = ws.getCell(req.session.user, name, row, col);
+  res.type("json").end(cjson.stringify(cell));
+});
+app.get("/table/:name/:row/:col/download", util, isUser, function(req, res) {
+  var {name, row, col} = req.params;
+  var cell = ws.getCell(req.session.user, name, row, col);
+  // TODO: test for failure and retur error page
+  // TODO: supply base64 field for binary data
+  if (cell.base64) {
+    var buf = new Buffer(cell.base64, "base64");
+    var ctype = magic.sync.detect(buf);
+    res.type(ctype).end(buf);
+  } else
+    res.end(cell.string);
+});
+app.post("table/:name/:row/:col/upload", util, isUser, upload.single("data"), function(req, res) {
+  // TODO: convert to base64, writecell, mark as binary
 });
 
 var server = app.listen(argv.port, "localhost");

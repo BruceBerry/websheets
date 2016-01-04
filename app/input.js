@@ -46,7 +46,7 @@ class Table {
     this.cells[row][col] = new Expr(src, oldCell.cell);
   }
   static get _json() { return "InputTable"; }
-  export() {
+  export(ws, user) {
     // removes ast info
     return {
       name: this.name,
@@ -62,11 +62,17 @@ class Table {
           }
         )
       ),
-      cells: _.mapObject(this.cells,
-        r => _.mapObject(r,
-          c => {
+      cells: _.map(this.cells,
+        (r, rIx) => _.mapObject(r,
+          (c, colName) => {
+            if (colName === "_owner")
+              return c;
             var nc = c.deepClone();
             delete nc.ast;
+            if (!ws.opts.debug && !ws.canRead(user, this.name, rIx, colName)) { 
+              nc.src = "[[censored]]";
+              nc.censored = true;
+            }
             return nc;
           }
         )
