@@ -61,7 +61,6 @@ var importTable = function(ws, user, csv) {
       }
       else {
         var expr = new i.Expr(c, `${tname}.${ix}.${col}`);
-        debugger;
         // default owner is the rowOwner. could be the table owner instead.
         expr._owner = r[0];
         return [col, expr];

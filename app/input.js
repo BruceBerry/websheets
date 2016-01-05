@@ -139,13 +139,15 @@ exports.combinePerms = function(p1, p2) {
   return new Expr(p1.src + " && " + p2.src, p1.cell, new ast.Binary("&&", p1.ast, p2.ast, ast.Loc.fakeLoc()));
 };
 
-// not intended to be general-purpose
+// not intended to be general-purpose, works for the types involved in ws
 Object.defineProperty(Object.prototype, "deepClone", { value:
   function() {
     if (Array.isArray(this)) {
       var arr = [];
       this.forEach(x => arr.push(x ? x.deepClone() : x));
       return arr;
+    } else if (this instanceof Date) {
+      return new Date(this.getTime());
     } else if (typeof this === "object") {
       var obj = Object.create(this.__proto__);
       Object.keys(this).forEach(k => { obj[k] = this[k] ? this[k].deepClone() : this[k] });
@@ -154,9 +156,3 @@ Object.defineProperty(Object.prototype, "deepClone", { value:
       return this;
   }
 });
-
-// var t = new Table("hi", "qqq", "me", ["a", "b"]});
-// var jt = cjson.stringify(t.deepClone());
-// console.log(jt);
-// var rt = cjson.parse(jt);
-// console.log(rt.perms);

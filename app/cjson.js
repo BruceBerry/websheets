@@ -29,16 +29,19 @@ var stringify = exports.stringify = function(obj) {
   return JSON.stringify(obj, replacer);
 };
 
+Date.prototype.toJSON = function() { return {_type: "Date", s: this.valueOf() }; };
 
 var parse = exports.parse = function(str) { return JSON.parse(str, reviver); };
 var reviver = function(k, v) {
   if (v && v._type) {
     // console.log("Reviving", v._type, cache[v._type]);
-    var p = cache[v._type];
-    if (!p) {
-      debugger;
-      throw v._type + " prototype is not registered";
+    if (v._type === "Date") {
+      // can't just assign the prototype
+      return new Date(v.s);
     }
+    var p = cache[v._type];
+    if (!p)
+      throw v._type + " prototype is not registered";
     delete v._type;
     var obj = Object.create(p);
     Object.assign(obj, v);

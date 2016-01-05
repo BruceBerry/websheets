@@ -108,7 +108,6 @@ class WebSheet {
   writeCell(user, name, row, column, src) {
     // TODO: update ownership if cells will have owners
     var table = this.input[name];
-    debugger;
     var oldExpr = table.cells[row][column];
     var newExpr = new i.Expr(src, oldExpr.cell);
     if (newExpr.error)
@@ -181,7 +180,7 @@ class WebSheet {
       col: new ast.TableValue(name, undefined, col),
       colName: new ast.ScalarValue(col),
       cell: new ast.TableValue(name, row, col),
-      // owner: TODO: cell owner?
+      owner: new ast.ScalarValue(table.cells[row][col]._owner)
     });
     _.each(table.columns, c => { env[c] = new ast.TableValue(name, row, c); });
     return env;

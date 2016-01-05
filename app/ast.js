@@ -711,7 +711,7 @@ class NormalDep extends Dep {
     this.col = col;
     this.row = row;
     this.recalculate = true;
-    this.enforce = true;
+    this.enforce = true; // declassification can turn this off
   }
   toString() { return `${this.name}.${this.row}.${this.col}`; }
   canRead(ws, user) {
@@ -780,3 +780,6 @@ class DeclDep extends Dep {
 exports.DeclDep = DeclDep;
 
 _.each(exports, v => cjson.register(v));
+
+var tdep = new TimeDep(new Date("2020"));
+debugger;
