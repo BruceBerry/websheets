@@ -157,6 +157,7 @@ class WebSheet {
     var expr = new i.Expr(src, "fromString");
     if (expr.error)
       throw expr.error;
+    debugger;
     return expr.ast.eval(this, user, {}).resolve(this);
   }
   mkTableEnv(name, user) {
@@ -203,19 +204,12 @@ class WebSheet {
     if (!cell)
       throw "Cell not found";
     // you have permission to read name.row.col iff the read permission is
-    // true AND if all the deps to the read permission are true. but remember
-    // to exclude the cell itself from the list of dependencies!
+    // true AND if all the deps to the read permission are true.
     var allDeps;
     if (cell.state === "evaluating")
       throw `Perm Loop`;
     else if (cell.state === "evaluated") {
-      // TODO: here and below, you need to look for DeclDeps in cell.data.deps
-      // and filter out the deps to which they apply.
-      allDeps = _.every(cell.data.deps, d => {
-        if (d instanceof ast.NormalDep && name === d.name && row === d.row && col === d.col)
-          return true;
-        return d.canRead(this, user);
-      });
+      allDeps = _.every(cell.data.deps, d => d.canRead(this, user));
       return cell.data.asPerm() && allDeps;
     } else if (cell.state === "error")
       return false;
@@ -233,11 +227,7 @@ class WebSheet {
         if (this.opts.verbose)
           console.log(`${user}:${name}.${row}.${col}.read = ${cell.data.toString()}`);
         cell.state = "evaluated";
-        allDeps = _.every(cell.data.deps, d => {
-          if (d instanceof ast.NormalDep && name === d.name && row === d.row && col === d.col)
-            return true;
-          return d.canRead(this, user);
-        });
+        allDeps = _.every(cell.data.deps, d => d.canRead(this, user));
         return cell.data.asPerm() && allDeps;
       } catch(e) {
         cell.state = "error";

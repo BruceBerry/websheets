@@ -581,7 +581,7 @@ class TableValue extends Value {
         if (cell.state === "evaluating")
           throw `Loop`;
         else if (cell.state === "evaluated")
-          return cell.data;
+          return cell.data.deepClone().addDeps(new NormalDep(this.name, this.row, this.col));
         else if (cell.state === "error")
           throw cell.data;
         else if (cell.state === "unevaluated") {
@@ -600,9 +600,10 @@ class TableValue extends Value {
             cell.data = cell.data.ast.eval(ws, user, env);
             if (ws.opts.verbose)
               console.log(`${this.name}.${this.row}.${this.col} = ${cell.data.toString()}`);
-            cell.data.addDeps(new NormalDep(this.name, this.row, this.col));
+            // callers get the cell as a dep, but the cached cell itself doesn't.
             cell.state = "evaluated";
-            return cell.data;
+            var retval = cell.data.deepClone();
+            return retval.addDeps(new NormalDep(this.name, this.row, this.col));
           } catch(e) {
             cell.state = "error";
             cell.data = e.toString();
@@ -780,6 +781,3 @@ class DeclDep extends Dep {
 exports.DeclDep = DeclDep;
 
 _.each(exports, v => cjson.register(v));
-
-var tdep = new TimeDep(new Date("2020"));
-debugger;
