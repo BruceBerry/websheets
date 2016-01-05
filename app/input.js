@@ -26,6 +26,7 @@ class Table {
       if (e.cell) {
         e.cell = newCell;
         e.ast.visitAll(n => { n.loc.cell = newCell });
+        e._owner = user;
       }
       return e;
     });
@@ -37,13 +38,14 @@ class Table {
       throw "Invalid index";
     this.cells.splice(i, 1);
   }
-  writeCell(row, col, src) {
+  writeCell(row, col, src, user) {
     if (this.columns.indexOf(col) === -1)
       throw "Invalid Column";
     if (row < 0 || row >= this.cells.length)
       throw "Invalid Row";
     var oldCell = this.cells[row][col];
-    this.cells[row][col] = new Expr(src, oldCell.cell);
+    var cell = this.cells[row][col] = new Expr(src, oldCell.cell);
+    cell._owner = user;
   }
   static get _json() { return "InputTable"; }
   export(ws, user) {

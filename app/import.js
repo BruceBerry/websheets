@@ -23,15 +23,11 @@ exports.import = function(ws, user, filename) {
   _(csvs).each(function(csv) {
     // parse csv
     csv = parse.sync(csv, {skip_empty_lines: false});
-    var table = csvToTable(csv, user);
-    if (ws.input[table.name])
-      throw `Table ${table.name} already exists`;
-    ws.input[table.name] = table;
-    ws.trigger("createTable", table.name);
+    importTable(ws, user, csv);
   });
 };
 
-var csvToTable = function(csv, owner) {
+var importTable = function(ws, user, csv) {
   var row = 0, col = 0;
 
   var rowLen = csv[0].length;
@@ -52,15 +48,24 @@ var csvToTable = function(csv, owner) {
   if (columns.toString() !== columns2.toString())
     throw "Format error " + columns + " != " + columns2;
   
-  var table = new i.Table(tname, tdesc, owner, columns);
+  var table = new i.Table(tname, tdesc, user, columns);
   var owcols = ["_owner", ...columns];
   table.cells = _(data).map((r,ix) => {
     return _.object(_(r).map((c,cx) => {
       var col = owcols[cx];
-      if (col === "_owner")
+      if (col === "_owner") {
+        // also add users with a default user/pass
+        if (ws.opts.importUsers)
+          ws.createUser(c, "pass");
         return [col, c];
-      else
-        return [col, new i.Expr(c, `${tname}.${ix}.${col}`)];
+      }
+      else {
+        var expr = new i.Expr(c, `${tname}.${ix}.${col}`);
+        debugger;
+        // default owner is the rowOwner. could be the table owner instead.
+        expr._owner = r[0];
+        return [col, expr];
+      }
     }));
   });
 
@@ -81,7 +86,11 @@ var csvToTable = function(csv, owner) {
       table.perms[perm][col] = new i.Expr(c, `${tname}.${perm}.${col}`);
     });
   });
-  return table;
+
+  if (ws.input[table.name])
+    throw `Table ${table.name} already exists`;
+  ws.input[table.name] = table;
+  ws.trigger("createTable", table.name);
 
 };
 

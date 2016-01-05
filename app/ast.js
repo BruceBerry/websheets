@@ -442,6 +442,10 @@ exports.Call = class Call extends Node {
       //  whitelist host for bash)
       // * side effects: all cells written through the json api have input deps.
       // with the json api are deps
+
+      // TODO: is it true? the user running the script could instead have
+      // full control on the dependencies. Thre is no security issue, it is basically
+      // an automatic TRUST wrap, which is fine since we impose the same preconditions.
       if (script.type === "js") {
         throw "JS support not implemented";
       } else if (script.type === "bash") {
@@ -742,6 +746,20 @@ class TimeDep extends Dep {
   canRead() { return true; }
 }
 exports.TimeDep = TimeDep;
+
+// like TimeDep, but it's not a guard, rather an active trigger
+class TriggerDep extends Dep {
+  constructor(date, user) {
+    super();
+    if (!(date instanceof Date))
+      throw "Timedep requires a date";
+    this.date = date;
+    this.user = user;
+  }
+  toString() { return `${this.user}>>${this.date.toString()}`; }
+  canRead() { return true; }
+}
+exports.TriggerDep = TriggerDep;
 
 // declassification by a user. take the dependencies of the cell referenced by
 // this dep and exempt them from the canRead check of the current cell if the

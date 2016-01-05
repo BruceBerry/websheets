@@ -47,8 +47,7 @@ module.exports = {
     }, 0);
     return new ast.ScalarValue(result).addDeps(args);
   },
-  // TODO: errors should use toCensoredString, not toString
-  mail: function(ws, user, env, ...args) {
+  MAIL: function(ws, user, env, ...args) {
     var [recipient, subject, text] = _.map(args, v => v.toCensoredJSValue(ws, user));
     _.each([recipient, subject, text], v => {
       if (typeof v !== "string") throw `${v.toString()} is not a string`;
@@ -89,26 +88,38 @@ module.exports = {
     // the object as yours. must be able to read all its dependencies to assume
     // ownership, either as the user evaluating it or as the cell
     // owner.
-    // TODO: check here or at runtime?
     try {
       var {name: {tableName: value},
            row: {rowIndex: value},
-           col: {colName: value}
+           col: {colName: value},
+           owner: {owner: value}
           } = env;
     } catch (e) {
       throw `Cannot use TRUST in a non-cell context`; 
     }
-    return v.addDeps(new ast.DeclDep(user, name, row, col));
+    return v.addDeps(new ast.DeclDep(owner, name, row, col));
   },
   AFTER: function(ws, user, env, v) {
-    // support unix epoch & Date friendly format
-    // TODO: cjson save dates 
+    // TODO: cjson save/load
     var d = new Date(v.value);
     if (isNaN(d.getYear()))
       throw `Invalid date format: ${v.toString()}`;
-    var retval = new ast.ScalarValue(null);
     if (d > new Date())
-      return retval.addDeps(new ast.TimeDep(d));
-    return retval;
+      return new ast.ScalarValue(false).addDeps(new ast.TimeDep(d));
+    return new ast.ScalarValue(true);
+  },
+  TRIGGER: function(ws, user, env, v) {
+    var owner;
+    var d = new Date(v.value);
+    if (isNaN(d.getYear()))
+      throw `Invalid date format: ${v.toString()}`;
+    try {
+      owner = env.owner.value;
+    } catch (e) {
+      throw `Cannot use TRIGGER in a non-cell context`;
+    }
+    if (d > new Date())
+      return new ast.ScalarValue(false).addDeps(new ast.TriggerDep(d, owner));
+    return new ast.ScalarValue(true);
   }
 };

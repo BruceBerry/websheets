@@ -32,6 +32,7 @@ var argv = argParser(process.argv.slice(2), {
     verbose: true, // print evaluation info
     adminReads: false, // does canRead always return true for admin (still evaluates)
     sendMail: false, // does not attempt to use mailgun, only logs new emails
+    importUsers: true, // when importing, create a user for each unknown owner
   }
 });
 console.log("Listening on port", argv.port);

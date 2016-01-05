@@ -40,12 +40,14 @@ class WebSheet {
     if (this.users[user])
       return false;
     this.users[user] = {user, pass};
+    this.trigger("createUser", user);
     return true;
   }
   deleteUser(user) {
     if (user === "admin" || !this.users[user])
       return false;
     delete this.users[user];
+    this.trigger("deleteUser", user);
     return true;
   }
   listUsers() {
@@ -128,7 +130,7 @@ class WebSheet {
     var allDeps = _.every(result.deps, d => d.canRead(this, user));
     if (!result.asPerm() || !allDeps)
       throw `You are not authorized to write ${src} to ${name}.${row}.${column}`;
-    table.writeCell(row, column, src);
+    table.writeCell(row, column, src, user);
     this.trigger("write", name, row, column);
   }
   getOutputTable(user, name) {
@@ -208,6 +210,8 @@ class WebSheet {
     if (cell.state === "evaluating")
       throw `Perm Loop`;
     else if (cell.state === "evaluated") {
+      // TODO: here and below, you need to look for DeclDeps in cell.data.deps
+      // and filter out the deps to which they apply.
       allDeps = _.every(cell.data.deps, d => {
         if (d instanceof ast.NormalDep && name === d.name && row === d.row && col === d.col)
           return true;
@@ -230,7 +234,6 @@ class WebSheet {
         if (this.opts.verbose)
           console.log(`${user}:${name}.${row}.${col}.read = ${cell.data.toString()}`);
         cell.state = "evaluated";
-        // Event.0.Public.read = false
         allDeps = _.every(cell.data.deps, d => {
           if (d instanceof ast.NormalDep && name === d.name && row === d.row && col === d.col)
             return true;
@@ -262,13 +265,40 @@ class WebSheet {
   trigger(type, table, ...extra) {
     if (this.opts.verbose)
       console.log("trigger", type, table);
+    // first, set all cell errors back to unevaluated!
+
+    // - createUser(name)
+    // - deleteUser(name)
     // - createTable(name)
     // - deleteTable(name)
     // - addRow(name, row(optional))
-    // - deleteRow(name, row)
-    // - write(name, row, col) // TODO: supply previous value/deps?
-    // - writePerm(name, perm, col)
+    // - deleteRow(name, row, oldRow)
+    // - write(name, row, col, oldCell) // TODO: supply previous value/deps?
+    // - writePerm(name, perm, col, oldPerm)
     // - writeOwner(name, row)
+
+    // the operations above only modify input tables and users. trigger
+    // handles the effect on output and permission cache tables, mainly by
+    // calculating the set of support cells for the current cell and restoring
+    // those as unevaluated as well.
+
+    // write: (simple version)
+    // - get the cell support set for the old cell (loop on table cells and
+    //   permission cells, use allDeps to find those that have the old cell as
+    //   a dependency)
+    // - mark cell and all cells from the support set as unevaluated (copy
+    //   back from input table)
+
+    // write: (detect changes)
+    // - assign a generation number to all cells
+    // - do not immediately mark cells as unevaluated, keep the evaluated version
+    //   marked as stale.
+    // - once evaluation of the stale cell is requested, check the generation
+    //   number of the dependencies.
+    // - if they are all older or equal, mark the cell back as evaluated
+    // - if they are not, re-evaluate the cell, but you should still check if
+    //   the new value is the same as the old one (including deps and flags).
+    //   if it is, do not update the generation number.
 
     // in strict semantics, evaluating an unevaluated cell doesn't trigger
     // anything, because cells that depend on it by definition have not been
@@ -289,7 +319,7 @@ class WebSheet {
     // thi stuff will be very slow without inverting the dependency graph into
     // a support graph, but i don't think i'm going to bother.
 
-    // deleteTable, writePerm, writeRow
+    // deleteTable, writePerm, writeOwner
     this.purge();
   }
 }
