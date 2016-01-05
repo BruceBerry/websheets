@@ -29,6 +29,7 @@ Below is the abstract of the paper:
 
 ### In Progress
 
+- Dependency analysis of formulas to minimize recalculation upon changes.
 - Execute imperative scripts in a sandbox
 - Time-based triggers
 - More involved examples
