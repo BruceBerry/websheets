@@ -50,7 +50,7 @@ var csvToTable = function(csv, owner) {
   columns.shift();
   columns2.pop();
   if (columns.toString() !== columns2.toString())
-    throw "Format error";
+    throw "Format error " + columns + " != " + columns2;
   
   var table = new i.Table(tname, tdesc, owner, columns);
   var owcols = ["_owner", ...columns];
@@ -78,8 +78,6 @@ var csvToTable = function(csv, owner) {
         return;
       if ((perm === "add" || perm === "del") && col !== "row")
         return;
-      //debugger;
-      // console.log(perm, col);
       table.perms[perm][col] = new i.Expr(c, `${tname}.${perm}.${col}`);
     });
   });

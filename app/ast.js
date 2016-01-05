@@ -392,8 +392,9 @@ exports.Filter = class Filter extends Node {
         var rowEnv = _.object(table.columns.map(c => [c, row.deepClone().setCol(ws, c)]));
         var rowResult = this.filter.eval(ws, user, Object.assign(rowEnv, env));
         if (rowResult.value === true) {
-          // TODO: override addDeps for tuple and list to push deps to the leaves
-          _(row).each(c => c.addDeps(rowResult));
+          // TODO: ??? override addDeps for tuple and list to push deps to the leaves
+          // maybe eliminate yourself as a dep?
+          row.addDeps(rowResult);
           acc.push(row);
         } else if (rowResult.value !== false)
           throw `${this.filter.toString()} does not return a boolean value`;
@@ -595,7 +596,7 @@ class TableValue extends Value {
             cell.data = cell.data.ast.eval(ws, user, env);
             if (ws.opts.verbose)
               console.log(`${this.name}.${this.row}.${this.col} = ${cell.data.toString()}`);
-            cell.data.addDeps(new Dep(this.name, this.row, this.col));
+            cell.data.addDeps(new NormalDep(this.name, this.row, this.col));
             cell.state = "evaluated";
             return cell.data;
           } catch(e) {
@@ -694,31 +695,37 @@ class TupleValue extends Value {
 exports.TupleValue = TupleValue;
 
 class Dep {
-  constructor(name, row, col, rec=true) {
-    // this might change later if dependencies require
-    // depending on an entire column, row etc
+  toString() { throw "abstract class"; }
+  canRead() { throw "abstract class"; }
+};
+exports.Dep = Dep;
+
+class NormalDep extends Dep {
+  constructor(name, row, col) {
+    super();
     this.name = name;
     this.col = col;
     this.row = row;
-    this.recalculate = rec;
+    this.recalculate = true;
+    this.enforce = true;
   }
-  toString() { return `${this.name}.${this.col}.${this.row}`; }
+  toString() { return `${this.name}.${this.row}.${this.col}`; }
   canRead(ws, user) {
-    // subclasses (e.g. decl or time) might just return true here
-    return ws.canRead(user, this.name, this.row, this.col);
+    return !this.enforce || ws.canRead(user, this.name, this.row, this.col);
   }
 }
-exports.Dep = Dep;
+exports.NormalDep = NormalDep;
 
 // a dependency only for recalculation purposes, represents a dependence on
 // addRow and delRow because you touched a cell inside a loop on all columns.
 class RowDep extends Dep {
   constructor(name, col) {
-    super(name, "*", col);
+    super();
+    this.name = name;
+    this.col = col;
   }
-  canRead(ws, user) {
-    return true;
-  }
+  toString() { return `${this.name}.*.${this.col}`; }
+  canRead(ws, user) { return true; }
 }
 exports.RowDep = RowDep;
 
@@ -726,8 +733,10 @@ exports.RowDep = RowDep;
 // created by a call to AFTER
 class TimeDep extends Dep {
   constructor(date) {
-    super("///", "///", "///");
-    this.date = new Date(date);
+    super();
+    if (!(date instanceof Date))
+      throw "Timedep requires a date";
+    this.date = date;
   }
   toString() { return "AFTER " + this.date.toString(); }
   canRead() { return true; }
@@ -741,8 +750,11 @@ exports.TimeDep = TimeDep;
 // dependencies.
 class DeclDep extends Dep {
   constructor(user, name, row, col) {
-    super(name, row, col);
+    super();
     this.user = user;
+    this.name = name;
+    this.row = row;
+    this.col = col;
   }
   toString() { return `${this.user}!${this.name}.${this.row}.${this.col}`; }
   canRead() { return true; }

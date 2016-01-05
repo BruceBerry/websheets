@@ -66,7 +66,7 @@ class WebSheet {
     return {
       tables: _(this.input).keys(),
       columns: _.chain(this.input).pluck("columns").flatten().value(),
-      functions: _.keys(this.functions).concat(_.keys(this.scripts));
+      functions: _.keys(this.functions).concat(_.keys(this.scripts))
     };
   }
   createTable(user, name, desc, columns) {
@@ -201,13 +201,18 @@ class WebSheet {
     var cell = table.cells[row][col];
     if (!cell)
       throw "Cell not found";
-    // you have permission to read name.row.col iff the read permission is true
-    // AND if all the deps to the read permission are true
+    // you have permission to read name.row.col iff the read permission is
+    // true AND if all the deps to the read permission are true. but remember
+    // to exclude the cell itself from the list of dependencies!
     var allDeps;
     if (cell.state === "evaluating")
-      throw `Pem Loop`;
+      throw `Perm Loop`;
     else if (cell.state === "evaluated") {
-      allDeps = _.every(cell.data.deps, d => this.canRead(user, d.name, d.row, d.col));
+      allDeps = _.every(cell.data.deps, d => {
+        if (d instanceof ast.NormalDep && name === d.name && row === d.row && col === d.col)
+          return true;
+        return d.canRead(this, user);
+      });
       return cell.data.asPerm() && allDeps;
     } else if (cell.state === "error")
       return false;
@@ -223,9 +228,14 @@ class WebSheet {
       try {
         cell.data = cell.data.ast.eval(this, user, env);
         if (this.opts.verbose)
-          console.log(`${name}.${row}.${col}.read = ${cell.data.toString()}`);
+          console.log(`${user}:${name}.${row}.${col}.read = ${cell.data.toString()}`);
         cell.state = "evaluated";
-        allDeps = _.every(cell.data.deps, d => this.canRead(user, d.name, d.row, d.col));
+        // Event.0.Public.read = false
+        allDeps = _.every(cell.data.deps, d => {
+          if (d instanceof ast.NormalDep && name === d.name && row === d.row && col === d.col)
+            return true;
+          return d.canRead(this, user);
+        });
         return cell.data.asPerm() && allDeps;
       } catch(e) {
         cell.state = "error";

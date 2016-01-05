@@ -3,6 +3,7 @@ all:
 	jade -P static/index.jade
 
 es6flags = --harmony_destructuring --harmony_default_parameters --harmony_spreadcalls --harmony_rest_parameters
+stackflags =  --stack_trace_limit=40 --stack_size=9840
 
 watch:
 	nodemon -- $(es6flags) server.js &

@@ -3,7 +3,6 @@ static/*.html
 uploads
 wf.js
 wfgen.js
-xls/
 .secret
 .mailgun
 

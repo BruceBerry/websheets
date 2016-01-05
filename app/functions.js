@@ -47,15 +47,6 @@ module.exports = {
     }, 0);
     return new ast.ScalarValue(result).addDeps(args);
   },
-  assert: function(ws, user, env, cond, msg, v) {
-    cond = cond.resolve(ws, user);
-    msg = msg.resolve(ws, user);
-    if (typeof cond.value !== "boolean" && typeof msg.value !== "string")
-      throw "Assert called with wrong types";
-    if (cond.value === false)
-      throw msg.value;
-    return v ? v.addDeps(cond, msg) : new ast.ScalarValue(null).addDeps(cond, msg);
-  },
   // TODO: errors should use toCensoredString, not toString
   mail: function(ws, user, env, ...args) {
     var [recipient, subject, text] = _.map(args, v => v.toCensoredJSValue(ws, user));
@@ -70,6 +61,19 @@ module.exports = {
     else
       console.log(`NEW MAIL\nFrom: ${sender}\nTo: ${recipient}\nSubject: ${subject}\n\n${text}\n`);
     return new ast.ScalarValue(null).addDeps(args);
+  },
+  ASSERT: function(ws, user, env, cond, msg, v) {
+    cond = cond.resolve(ws, user);
+    msg = msg.resolve(ws, user);
+    if (typeof cond.value !== "boolean" && typeof msg.value !== "string")
+      throw "Assert called with wrong types";
+    if (cond.value === false)
+      throw msg.value;
+    return v ? v.addDeps(cond, msg) : new ast.ScalarValue(null).addDeps(cond, msg);
+  },
+  DEBUG: function(ws, user, env, x) {
+    debugger;
+    return x;
   },
   FIX: function(ws, user, env, v) {
     // remove the re-calculate effect of its dependencies, forcing a value to
@@ -98,9 +102,13 @@ module.exports = {
   },
   AFTER: function(ws, user, env, v) {
     // support unix epoch & Date friendly format
-    var tdep = new ast.TimeDep(v.value);
-    if (isNaN(tdep.date.getYear()))
+    // TODO: cjson save dates 
+    var d = new Date(v.value);
+    if (isNaN(d.getYear()))
       throw `Invalid date format: ${v.toString()}`;
-    return new ast.ScalarValue(null).addDeps(tdep);
+    var retval = new ast.ScalarValue(null);
+    if (d > new Date())
+      return retval.addDeps(new ast.TimeDep(d));
+    return retval;
   }
 };
