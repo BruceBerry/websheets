@@ -247,7 +247,8 @@ app.post("/table/:name/edit", util, isUser, function(req, res) {
     isOwnerOrAdmin(req, res, function() {
       ws.input[name].perms[perm][column] =
         new i.Expr(src, `${name}.${perm}.${column}`);
-      ws.trigger("writePerm", name, perm, column);
+      if (perm === "read")
+        ws.trigger("writePerm", name, perm, column);
       res.end();
     });
   } else if (column === "_owner") {

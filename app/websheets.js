@@ -263,6 +263,9 @@ class WebSheet {
             if (isRead) {
               // combine perms
               let it = this.input[table.name];
+              // (see below) in case of deletetable, this is also not defined any longer.
+              if (!it)
+                return;
               let cellP = it.perms.read[colName];
               let rowP = it.perms.read.row;
               expr = i.combinePerms(cellP, rowP);
@@ -392,6 +395,7 @@ class WebSheet {
       delete this.output.values[name];
       _(this.output.permissions).each(up => delete up[name]);
       this.support(name, "*", "*", function(name, row, col, expr, cell, isRead) {
+        console.log(`>>> marking support cell ${name}.${row}.${col}.${isRead}`);
         cell.state = "unevaluated";
         cell.oldData = cell.data; // restore this iff dependencies are not stale
         cell.data = expr.deepClone();
