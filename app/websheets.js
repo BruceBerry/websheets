@@ -83,7 +83,8 @@ class WebSheet {
   }
   addRow(user, name, row) {
     var env = this.mkTableEnv(name, user);
-    var expr = this.input[name].perms.add.row;
+    var table = this.input[name];
+    var expr = table.perms.add.row;
     if (expr.error)
       throw `Cannot add row, error in expr ${expr.error.toString()}`;
     var result = i.defaultPerm(expr).ast.eval(this, user, env).resolve(this, user);
@@ -91,8 +92,8 @@ class WebSheet {
     var allDeps = _.every(result.deps, d => d.canRead(this, user));
     if (!result.asPerm() || !allDeps)
       throw `You are not authorized add a new row to ${name}`;
-    this.input[name].addRow(user, row);
-    this.trigger("addRow", name, row);
+    table.addRow(user, row);
+    this.trigger("addRow", name, row || table.cells.length-1); // -1 b/c it just increased
   }
   deleteRow(user, name, row) {
     var env = this.mkTableEnv(name, user);
@@ -266,7 +267,16 @@ class WebSheet {
               let rowP = it.perms.read.row;
               expr = i.combinePerms(cellP, rowP);
             } else {
-              expr = this.input[table.name].cells[rowIx][colName];
+              // in case of deleterow/deletetable, the source expr might not
+              // be defined anymore! in that case, the output cells are about
+              // to be deleted as well so we just skip them.
+              let itable = this.input[table.name];
+              if (!itable)
+                return;
+              let irow = itable.cells[rowIx];
+              if (!irow)
+                return;
+              expr = irow[colName];
             }
             // console.log(`>>> looping on ${table.name}.${rowIx}.${colName}.${isRead}`);
             f(table.name, rowIx, colName, expr, cell, isRead);
@@ -277,16 +287,19 @@ class WebSheet {
     visitTable(this.output.values, false);
     _(this.output.permissions).each(u => visitTable(u, true));
   }
-  cellSupport(_name, _row, _col, f) {
+  support(_name, _row, _col, f) {
     // executes the callback on all the cells that depend on the selected cell
     // (with NormalDep only)
+    // you can ignore _row and _col by setting them to "*"
     this.loop((name, row, col, expr, cell, isRead) => {
       if (cell.state !== "evaluated")
         return;
       // console.log(`> Looping on ${name}.${row}.${col}.${isRead}`, cell.data.allDeps());
       _(cell.data.allDeps()).each(d => {
         if (d instanceof ast.NormalDep && d.name === _name &&
-            d.row === _row && d.col === _col && d.recalculate === true) {
+            (d.row === _row || _row === "*") &&
+            (d.col === _col || _col === "*") &&
+            d.recalculate === true) {
           f(name, row, col, expr, cell, isRead);
         }
       });  
@@ -308,13 +321,14 @@ class WebSheet {
       delete cell.error;
       delete cell.generation;
     });
+    // afterwards, we are either evaluated or unevaluated
 
     if (type === "write") {
       let [row, col] = extra;
-      this.cellSupport(name, row, col, function(name, row, col, expr, cell, isRead) {
-        console.log(`>>> examining support cell ${name}.${row}.${col}.${isRead}`);
+      this.support(name, row, col, function(name, row, col, expr, cell, isRead) {
+        console.log(`>>> marking support cell ${name}.${row}.${col}.${isRead}`);
         cell.state = "unevaluated";
-        cell.oldData = cell.data;
+        cell.oldData = cell.data; // restore this iff dependencies are not stale
         cell.data = expr.deepClone();
       });
       // this one does *not* become stale, it just becomes plain invalid
@@ -333,38 +347,63 @@ class WebSheet {
         delete cell.generation;
         delete cell.error;
       });
-      // and then follow along the support graph of the related value
-      // or NOT :-) because we always call canRead for all deps even if stuff
-      // is evaluated, so no one is really depending on the value of this
-      // permission cell.
-      // this.trigger("write", name, row, col);
+      // because we always loop on all deps in canRead even if a cell has
+      // already been evaluated, no one is really depending on the value of
+      // this permission cell.
     } else if (type === "writeOwner") {
       // we pretend we modified all cells of the row,
       // so the code automatically goes after their support set
       let [row] = extra;
-      var cols = this.input[name].columns;
+      let cols = this.input[name].columns;
       _.each(cols, col => this.trigger("write", name, row, col));
     } else if (type === "addRow") {
-      // update the cache to have another unevaluated row, then invalidate the support
-      // graph of row dependencies
+      // update the value and perm cache to have another unevaluated row,
+      // then invalidate the support graph of row dependencies (see notes below)
       // TODO: implement row permissions
-      var ot = this.output.values[name];
-      throw "AA";
-      ot.addRow()
+      let [row] = extra;
+      let ot = this.output.values[name];
+      if (row !== ot.cells.length)
+        console.warn("Only adding the last row is implemented correctly.");
+      ot.addRow(this, row, false);
+      _(this.output.permissions).each(up => {
+        up[name].addRow(this, row, true);
+      });
     } else if (type === "deleteRow") {
       // same as addRow, plus invalidate any normaldep that refers to this row
+      let [row] = extra;
+      let ot = this.output.values[name];
+      debugger;
+      if (row !== ot.cells.length - 1)
+        console.warn("Only deleting the last row is implemented correctly.");
+      ot.deleteRow(row);
+      _(this.output.permissions).each(up => {
+        up[name].deleteRow(row);
+      });
+      this.support(name, row, "*", function(name, row, col, expr, cell, isRead) {
+        console.log(`>>> marking support cell ${name}.${row}.${col}.${isRead}`);
+        cell.state = "unevaluated";
+        cell.oldData = cell.data; // restore this iff dependencies are not stale
+        cell.data = expr.deepClone();
+      });
     } else if (type === "createTable") {
       // nothing, we already create output tables on demand
     } else if (type === "deleteTable") {
       // delete cached tables, invalidate any normaldep that refers to this table
+      delete this.output.values[name];
+      _(this.output.permissions).each(up => delete up[name]);
+      this.support(name, "*", "*", function(name, row, col, expr, cell, isRead) {
+        cell.state = "unevaluated";
+        cell.oldData = cell.data; // restore this iff dependencies are not stale
+        cell.data = expr.deepClone();
+      });
     } else
       throw `Unhandled trigger ${type}`;
 
     // - write(name, row, col)
     // - writePerm(name, perm, col)
     // - writeOwner(name, row)
-    // - addRow(name, row(optional))
-    // - deleteRow(name, row, oldRow)
+    // - addRow(name, row)
+    // - deleteRow(name, row)
     // - createTable(name)
     // - deleteTable(name)
 
@@ -407,8 +446,14 @@ class WebSheet {
     // that pattern where you record the number of changes and if it's not the
     // current one you know it hasn't changed? generation?
 
-    // thi stuff will be very slow without inverting the dependency graph into
-    // a support graph, but i don't think i'm going to bother.
+    // performance won't be good without maintaining a support graph, right
+    // now we just loop over all output cells.
+
+    // TODO: addRow and delRow actually cause much more disruption than i
+    // previously thought. any index equal or greater than the one affected
+    // must be marked as stale. this could be optimized by distiguishing
+    // between local and absolute row references, so that only absolute
+    // references are affected.
 
   }
 }

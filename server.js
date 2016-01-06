@@ -265,8 +265,8 @@ app.post("/table/:name/addrow", util, isUser, function(req, res) {
   ws.addRow(req.session.user, req.params.name, req.body.row);
   res.end();
 });
-app.post("/table/:name/deleterow", util, isUser, function(req, res) {
-  ws.deleteRow(req.session.user, req.params.name, req.body.row);
+app.post("/table/:name/:row/deleterow", util, isUser, function(req, res) {
+  ws.deleteRow(req.session.user, req.params.name, req.params.row);
   res.end();
 });
 app.post("/table/import", isUser, upload.single("xls"), fibrous.middleware, function(req, res) {

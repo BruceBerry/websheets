@@ -732,7 +732,9 @@ class NormalDep extends Dep {
     this.recalculate = true;
     this.enforce = true; // declassification can turn this off
   }
-  toString() { return `${this.name}.${this.row}.${this.col}`; }
+  toString() {
+    return `${this.name}.${this.row}.${this.col}[${this.recalculate?"r":""}${this.enforce?"e":""}]`;
+  }
   canRead(ws, user) {
     return !this.enforce || ws.canRead(user, this.name, this.row, this.col);
   }

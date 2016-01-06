@@ -100,7 +100,6 @@ module.exports = {
     return v.addDeps(new ast.DeclDep(owner, name, row, col));
   },
   AFTER: function(ws, user, env, v) {
-    // TODO: cjson save/load
     var d = new Date(v.value);
     if (isNaN(d.getYear()))
       throw `Invalid date format: ${v.toString()}`;

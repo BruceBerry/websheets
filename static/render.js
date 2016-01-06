@@ -100,7 +100,7 @@ function interact(table, mode) {
   $(".row-delete").on("click", function() {
     var $this = $(this);
     var index = $this.parents("[data-row]").data("row");
-    $.post(`/table/${table.name}/deleterow`, {row: index})
+    $.post(`/table/${table.name}/${index}/deleterow`)
       .done(() => routes[mode + "Table"](table.name))
       .fail(res => displayError(res.responseText));
   });

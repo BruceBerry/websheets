@@ -20,17 +20,22 @@ class Table {
     ot.description = "[[READ]]" + it.description;
     ot.owner = it.owner;
     ot.columns = it.columns;
-    ot.cells = it.cells.map(row => _.mapObject(row, (orig, colName) => {
-      if (colName === "_owner")
-        return orig;
-      var cellP = it.perms.read[colName];
-      var rowP = it.perms.read.row;
-      return new Cell(i.combinePerms(cellP, rowP));
-    }));
-    return ot; 
+    ot.cells = it.cells.map(row => fromInputPerm(it));
+    return ot;
   }
-  addRow(ws, ix) {
-
+  addRow(ws, row, isPerm) {
+    // called from trigger
+    // at this point, the input table has one more row than this one
+    var orow;
+    if (isPerm)
+      orow = fromInputPerm(ws.input[this.name]);
+    else
+      orow = fromInputRow(ws.input[this.name].cells[row]);
+    this.cells.splice(row, 0, orow);
+  }
+  deleteRow(row) {
+    debugger;
+    this.cells.splice(i, 1);
   }
   censor(ws, user) {
     var copy = this.deepClone();
@@ -54,6 +59,19 @@ var fromInputRow = function(row) {
     return new Cell(c);
   });
 };
+
+// doesn't actually need the row
+// we don't propagate the owner,
+// do we need it?
+var fromInputPerm = function(it) {
+  return _.object(_(it.columns).map(c => {
+    var cellP = it.perms.read[c];
+    var rowP = it.perms.read.row;
+    var cell = new Cell(i.combinePerms(cellP, rowP));
+    return [c, cell];
+  }));
+};
+
 
 
 class Cell {
