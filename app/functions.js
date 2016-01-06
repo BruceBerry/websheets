@@ -100,25 +100,38 @@ module.exports = {
     return v.addDeps(new ast.DeclDep(owner, name, row, col));
   },
   AFTER: function(ws, user, env, v) {
-    var d = new Date(v.value);
-    if (isNaN(d.getYear()))
-      throw `Invalid date format: ${v.toString()}`;
+    var d = vToDate(v);
     if (d > new Date())
       return new ast.ScalarValue(false).addDeps(new ast.TimeDep(d));
     return new ast.ScalarValue(true);
   },
   TRIGGER: function(ws, user, env, v) {
-    var owner;
-    var d = new Date(v.value);
-    if (isNaN(d.getYear()))
-      throw `Invalid date format: ${v.toString()}`;
+    var d = vToDate(v);
     try {
-      owner = env.owner.value;
+      var {name: {tableName: value},
+           row: {rowIndex: value},
+           col: {colName: value},
+           owner: {owner: value}
+          } = env;
     } catch (e) {
       throw `Cannot use TRIGGER in a non-cell context`;
     }
     if (d > new Date())
-      return new ast.ScalarValue(false).addDeps(new ast.TriggerDep(d, owner));
+      return new ast.ScalarValue(false).addDeps(new ast.TriggerDep(owner, name, row, col, d));
     return new ast.ScalarValue(true);
   }
+};
+
+// to ease debugging, if you pass a number N you set the trigger to N seconds in the future
+var vToDate = function(v) {
+  var d;
+  if (typeof v.value === "string")
+    d = new Date(v.value);
+  else if (typeof v.value === "number") {
+    d = new Date();
+    d.setSeconds(d.getSeconds()+v.value)
+  }
+  if (isNaN(d.getYear()))
+    throw `Invalid date format: ${v.toString()}`;
+  return d;
 };

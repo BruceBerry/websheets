@@ -717,6 +717,9 @@ class TupleValue extends Value {
 exports.TupleValue = TupleValue;
 
 class Dep {
+  constructor() {
+    this.recalculate = true;
+  }
   toString() { throw "Dep::toString: abstract class"; }
   canRead() { throw "Dep::canRead: abstract class"; }
 }
@@ -729,7 +732,6 @@ class NormalDep extends Dep {
     this.name = name;
     this.col = col;
     this.row = row;
-    this.recalculate = true;
     this.enforce = true; // declassification can turn this off
   }
   toString() {
@@ -765,16 +767,14 @@ class TimeDep extends Dep {
   }
   toString() { return "AFTER " + this.date.toString(); }
   canRead() { return true; }
+  hasPassed() { return this.date <= new Date(); }
 }
 exports.TimeDep = TimeDep;
 
 // like TimeDep, but it's not a guard, rather an active trigger
-class TriggerDep extends Dep {
+class TriggerDep extends TimeDep {
   constructor(date, user) {
-    super();
-    if (!(date instanceof Date))
-      throw "Timedep requires a date";
-    this.date = date;
+    super(date);
     this.user = user;
   }
   toString() { return `${this.user}>>${this.date.toString()}`; }

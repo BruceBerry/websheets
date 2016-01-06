@@ -24,7 +24,7 @@ var argv = argParser(process.argv.slice(2), {
     port: 8000,
     address: "localhost",
     saveFile: os.homedir() + "/.websheets",
-    admin: true, // always logged in as admin
+    admin: true, // if not logged in, always logs you in as admin
     newAccounts: true, // prevent creation of new accounts
     autoEval: true, // should viewing an output table trigger evaluation of the whole table?
     debug: false, // if true, json responses leak debug information, and only
@@ -32,7 +32,8 @@ var argv = argParser(process.argv.slice(2), {
     verbose: true, // print evaluation info
     adminReads: false, // does canRead always return true for admin (still evaluates)
     sendMail: false, // does not attempt to use mailgun, only logs new emails
-    importUsers: true, // when importing, create a user for each unknown owner
+    importUsers: true, // when importing, create a user for each unknown owner row
+    adminCanSwitch: true, // once you login as admin, use /user/:user/login to switch around
   }
 });
 console.log("Listening on port", argv.port);
@@ -100,7 +101,7 @@ app.get("/", function(req, res) {
 });
 
 var isUser = function(req, res, next) {
-  if (argv.admin)
+  if (argv.admin && !req.session.user)
     req.session.user = "admin";
   if (req.session.user)
     next();
@@ -108,8 +109,6 @@ var isUser = function(req, res, next) {
     res.status(403).end("Must be logged in");
 };
 var isAdmin = function(req, res, next) {
-  if (argv.admin)
-    req.session.user = "admin";
   isUser(req, res, function() {
     if (req.session.user === "admin")
       next();
@@ -118,9 +117,6 @@ var isAdmin = function(req, res, next) {
   });
 };
 var isOwnerOrAdmin = function(req, res, next) {
-  if (argv.admin)
-    req.session.user = "admin";
-
   isUser(req, res, function() {
     if (!ws.input[req.params.name])
       res.status(403).end("Table does not exist");
@@ -135,10 +131,21 @@ var isOwnerOrAdmin = function(req, res, next) {
 app.post("/user/login", function(req, res) {
   if (ws.authUser(req.body.user, req.body.pass)) {
     req.session.user = req.body.user;
+    if (req.session.user === "admin" && argv.adminCanSwitch)
+      req.session.privileged = true;
     console.log("logged in as", req.session.user);
     res.end();
   } else
     res.status(400).end("invalid username/password");
+});
+app.get("/user/:user/login", isUser, function(req, res) {
+  if (req.session.user === "admin" && argv.adminCanSwitch)
+    req.session.privileged = true;
+  if (req.session.privileged && ws.users[req.params.user]) {
+    req.session.user = req.params.user;
+    res.end();
+  } else
+    res.status(400).end("Cannot switch");
 });
 app.get("/user/whoami", isUser, function(req, res) {
   res.end(req.session.user);
@@ -173,7 +180,7 @@ app.get("/user/list", isUser, function(req, res) {
 app.post("/debug/eval", isUser, function(req, res) {
   var result = ws.evalString(req.session.user, req.body.src);
   result.string = result.toCensoredString(ws, req.session.user);
-  res.json(result);
+  res.type("json").end(cjson.stringify(result));
 });
 app.get("/debug/keywords", isUser, function(req, res) {
   var result = ws.listKeywords();
@@ -184,6 +191,7 @@ app.post("/admin/purge", isAdmin, function(req, res) {
   res.end();
 });
 app.post("/admin/reset", isAdmin, function(req, res) {
+  clearInterval(ws.intervalID);
   ws = new WebSheet(argv);
   res.end();
 });
@@ -194,6 +202,7 @@ app.post("/admin/quit", isAdmin, function(req, res) {
 });
 app.post("/admin/load", isAdmin, upload.single("load"), function(req, res) {
   try {
+    clearInterval(ws.intervalID);
     ws = WebSheet.load(req.file.path, argv);
     console.log("Successfully loaded state.");
     res.end();

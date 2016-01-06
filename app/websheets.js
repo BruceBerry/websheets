@@ -12,18 +12,21 @@ var wsfuncs = require("./functions");
 class WebSheet {
   constructor(opts) {
     this.generation = 0;
-    this.users = {admin: {user: "admin", pass: "pass"}};
+    this.users = {admin: {user: "admin", pass: "pass"}, ric: {user: "ric", pass: "pass"}};
     this.input = {};
     this.output = {values:{}, permissions:{}};
     this.opts = opts;
-    this.createTable("admin", "prova", "here", ["a", "bb", "ab"]);
     this.functions = wsfuncs;
     this.scripts = {};
+    // must be cleared on the server
+    this.intervalID = setInterval(() => this.timeCheck(), 10*1000);
+    this.timeCheck();
+    this.createTable("admin", "prova", "here", ["a", "bb", "ab"]);
     this.input.prova.addRow("admin");
   }
 
   save(path) {
-    var json = cjson.stringify(_.omitClone(this, "opts", "functions"));
+    var json = cjson.stringify(_.omitClone(this, "opts", "functions", "intervalID"));
     fs.writeFileSync(path, json, "utf8");
   }
   static load(path, opts) {
@@ -31,6 +34,8 @@ class WebSheet {
     var ws = cjson.parse(json);
     ws.opts = opts;
     ws.functions = wsfuncs;
+    ws.intervalID = setInterval(() => ws.timeCheck(), 10*1000);
+    ws.timeCheck();
     return ws;
   }
 
@@ -297,7 +302,6 @@ class WebSheet {
     this.loop((name, row, col, expr, cell, isRead) => {
       if (cell.state !== "evaluated")
         return;
-      // console.log(`> Looping on ${name}.${row}.${col}.${isRead}`, cell.data.allDeps());
       _(cell.data.allDeps()).each(d => {
         if (d instanceof ast.NormalDep && d.name === _name &&
             (d.row === _row || _row === "*") &&
@@ -375,7 +379,6 @@ class WebSheet {
       // same as addRow, plus invalidate any normaldep that refers to this row
       let [row] = extra;
       let ot = this.output.values[name];
-      debugger;
       if (row !== ot.cells.length - 1)
         console.warn("Only deleting the last row is implemented correctly.");
       ot.deleteRow(row);
@@ -426,7 +429,7 @@ class WebSheet {
     // write: (detect changes)
     // - assign a generation number to all cells
     // - do not immediately mark cells as unevaluated, keep the evaluated version
-    //   marked as stale.
+    //   around, marking the cell as potentially stale.
     // - once evaluation of the stale cell is requested, check the generation
     //   number of the dependencies.
     // - if they are all older or equal, mark the cell back as evaluated
@@ -459,6 +462,26 @@ class WebSheet {
     // between local and absolute row references, so that only absolute
     // references are affected.
 
+  }
+  timeCheck() {
+    this.loop((name, row, col, expr, cell, isRead) => {
+      if (cell.state !== "evaluated")
+        return;
+      _(cell.data.allDeps()).each(d => {
+        if (d instanceof ast.TimeDep && d.recalculate === true &&
+          d.hasPassed()) {
+          cell.state = "unevaluated";
+          cell.oldData = cell.data; // restore this iff dependencies are not stale
+          cell.data = expr.deepClone();
+          // if it's a timedep, we are done. if it's a trigger,
+          // then we have to eval the trigger cell
+          if (d instanceof ast.TriggerDep && d.name === name &&
+              d.row === row && d.col === col && isRead === false) {
+            this.evalString(d.owner, `${name}.${row}.${col}`);
+          }
+        }
+      });
+    });
   }
 }
 cjson.register(WebSheet);
