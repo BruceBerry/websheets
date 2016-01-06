@@ -283,6 +283,7 @@ class WebSheet {
     this.loop((name, row, col, expr, cell, isRead) => {
       if (cell.state !== "evaluated")
         return;
+      // console.log(`> Looping on ${name}.${row}.${col}.${isRead}`, cell.data.allDeps());
       _(cell.data.allDeps()).each(d => {
         if (d instanceof ast.NormalDep && d.name === _name &&
             d.row === _row && d.col === _col && d.recalculate === true) {

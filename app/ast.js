@@ -218,6 +218,9 @@ exports.Select = class Select extends Node {
   children() { return [this.l]; }
   eval(ws, user, env) {
     var l = this.l.eval(ws, user, env);
+    // TODO: add deps to selected/projected stuff?
+    // since we don't push them down eagerly maybe we have to do it now
+    // also in TableValue.resolve
     var selectRow = function(l, row) {
       // [a,b].1 => b
       if (!l.isList())
@@ -480,15 +483,11 @@ class Value {
   isTuple() { return false; }
   isTable() { return false; }
   addDeps(...args) {
-    // TODO: remove duplicates, at least of NormalDeps
-    // you also have to do it in allDeps
+    // try a=bb+ab, bb=4, ab=bb to see if it works
     args = _.flatten(args);
-    _(args).each(arg => {
-      if (arg instanceof Dep)
-        this.deps.push(arg);
-      else
-        this.deps = this.deps.concat(arg.deps);
-    });
+    args = _(args).map(arg => arg instanceof Dep ? arg : arg.deps);
+    args = _.flatten(args).deepClone();
+    this.deps = _.uniq(this.deps.concat(args), false, Dep.uniqFun);
     return this;
   }
   allDeps() { return this.deps.deepClone(); }
@@ -639,7 +638,8 @@ class TableValue extends Value {
   }
   children() { console.warn("You probably want to resolve first"); return []; }
   isTable() { return true; }
-  // allDeps: we do not resolve
+  // allDeps: we do not resolve for now
+  allDeps() { console.warn("You are probably missing dependencies"); return this.deps.deepClone(); }
 }
 exports.TableValue = TableValue;
 
@@ -673,8 +673,9 @@ class ListValue extends Value {
     return this;
   }
   allDeps() {
-    var vdeps = this.values.map(v => v.allDeps());
-    return this.deps.deepClone().concat(...vdeps);
+    var vdeps = _.flatten(this.values.map(v => v.allDeps())).deepClone();
+    var deps = this.deps.deepClone();
+    return _.uniq(deps.concat(vdeps), false, Dep.uniqFun);
   }
 }
 exports.ListValue = ListValue;
@@ -708,8 +709,9 @@ class TupleValue extends Value {
     return this;
   }
   allDeps() {
-    var mdeps = _(this.map).map(v => v.allDeps());
-    return this.deps.deepClone().concat(...mdeps);
+    var mdeps = _(this.map).map(v => v.allDeps()).deepClone();
+    var deps = this.deps.deepClone();
+    return _.uniq(deps.concat(mdeps), false, Dep.uniqFun);
   }
 }
 exports.TupleValue = TupleValue;
@@ -718,6 +720,7 @@ class Dep {
   toString() { throw "Dep::toString: abstract class"; }
   canRead() { throw "Dep::canRead: abstract class"; }
 }
+Dep.uniqFun = d => d instanceof NormalDep ? d.toString() : {};
 exports.Dep = Dep;
 
 class NormalDep extends Dep {
