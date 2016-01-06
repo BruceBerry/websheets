@@ -16,7 +16,7 @@ class Table {
   }
   static permFromInputTable(it) {
     var ot = new Table();
-    ot.name = "[[READ]]" + it.name;
+    ot.name = it.name;
     ot.description = "[[READ]]" + it.description;
     ot.owner = it.owner;
     ot.columns = it.columns;
@@ -28,6 +28,9 @@ class Table {
       return new Cell(i.combinePerms(cellP, rowP));
     }));
     return ot; 
+  }
+  addRow(ws, ix) {
+
   }
   censor(ws, user) {
     var copy = this.deepClone();

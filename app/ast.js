@@ -40,9 +40,9 @@ class Node {
       return;
     this.children().forEach(n => n.visit(f));
   }
-  toString() { throw "Abstract class"; }
+  toString() { throw "Node::tostring: Abstract class"; }
   children() { return []; }
-  eval(ws, user, env) { throw "Abstract class"; }
+  eval(ws, user, env) { throw "Node::eval: Abstract class"; }
 }
 
 class Literal extends Node {
@@ -446,6 +446,7 @@ exports.Call = class Call extends Node {
       // TODO: is it true? the user running the script could instead have
       // full control on the dependencies. Thre is no security issue, it is basically
       // an automatic TRUST wrap, which is fine since we impose the same preconditions.
+      // => we call canRead right here, then you get to keep your values dep-free.
       if (script.type === "js") {
         throw "JS support not implemented";
       } else if (script.type === "bash") {
@@ -466,10 +467,10 @@ class Value {
   resolve(ws, user) {
     return this;
   }
-  toString() { throw "abstract class"; }
-  toCensoredString(ws, user) { throw "abstract class"; }
-  toJSValue(ws, user) { throw "abstract class"; } // pass ws and user b/c we need resolution
-  toCensoredJSValue(ws, user) { throw "abstract class"; }
+  toString() { throw "Value::toString: abstract class"; }
+  toCensoredString(ws, user) { throw "Value::toCensoredString: abstract class"; }
+  toJSValue(ws, user) { throw "Value::toJSValue: abstract class"; } // pass ws and user b/c we need resolution
+  toCensoredJSValue(ws, user) { throw "Value::toCensoredJSValue: abstract class"; }
   visitAll(f) {
     if (f(this) !== false)
       this.children().forEach(n => n.visitAll(f));
@@ -479,6 +480,8 @@ class Value {
   isTuple() { return false; }
   isTable() { return false; }
   addDeps(...args) {
+    // TODO: remove duplicates, at least of NormalDeps
+    // you also have to do it in allDeps
     args = _.flatten(args);
     _(args).each(arg => {
       if (arg instanceof Dep)
@@ -488,6 +491,7 @@ class Value {
     });
     return this;
   }
+  allDeps() { return this.deps.deepClone(); }
   asPerm() { throw `Permissions must return boolean values, not ${this.toString()}`; }
 }
 Value.censor = "##";
@@ -574,7 +578,7 @@ class TableValue extends Value {
       // a.1
       if (typeof this.col === "string") {
         // a.1.b => fetch
-        // this is the core branch
+        // this is the main branch
         if (!ws.output.values[this.name])
           ws.output.values[this.name] = o.Table.fromInputTable(ws.input[this.name]);
         var cell = ws.output.values[this.name].cells[this.row][this.col];
@@ -597,11 +601,12 @@ class TableValue extends Value {
             console.log(`evaluating ${this.name}.${this.row}.${this.col}`);
           var env = ws.mkCellEnv(this.name, this.row, this.col);
           try {
-            cell.data = cell.data.ast.eval(ws, user, env);
+            cell.data = cell.data.ast.eval(ws, user, env).resolve(ws, user);
             if (ws.opts.verbose)
               console.log(`${this.name}.${this.row}.${this.col} = ${cell.data.toString()}`);
             // callers get the cell as a dep, but the cached cell itself doesn't.
             cell.state = "evaluated";
+            cell.generation = ws.generation;
             var retval = cell.data.deepClone();
             return retval.addDeps(new NormalDep(this.name, this.row, this.col));
           } catch(e) {
@@ -627,12 +632,14 @@ class TableValue extends Value {
     }
   }
   toString() { return `{{${this.name}.${this.row}.${this.col}}}`; }
+  toCensoredString(ws, user) { return this.resolve(ws, user).toCensoredString(ws, user); }
   toJSValue(ws, user) { return this.resolve(ws, user).toJSValue(ws, user); }
   toCensoredJSValue(ws, user) {
     this.resolve(ws, user).toCensoredJSValue(ws, user);
   }
   children() { console.warn("You probably want to resolve first"); return []; }
   isTable() { return true; }
+  // allDeps: we do not resolve
 }
 exports.TableValue = TableValue;
 
@@ -665,6 +672,10 @@ class ListValue extends Value {
     this.values = _(this.values).map(v => v.resolve(ws, user));
     return this;
   }
+  allDeps() {
+    var vdeps = this.values.map(v => v.allDeps());
+    return this.deps.deepClone().concat(...vdeps);
+  }
 }
 exports.ListValue = ListValue;
 
@@ -696,13 +707,17 @@ class TupleValue extends Value {
     this.map = _(this.map).mapObject(v => v.resolve(ws, user));
     return this;
   }
+  allDeps() {
+    var mdeps = _(this.map).map(v => v.allDeps());
+    return this.deps.deepClone().concat(...mdeps);
+  }
 }
 exports.TupleValue = TupleValue;
 
 class Dep {
-  toString() { throw "abstract class"; }
-  canRead() { throw "abstract class"; }
-};
+  toString() { throw "Dep::toString: abstract class"; }
+  canRead() { throw "Dep::canRead: abstract class"; }
+}
 exports.Dep = Dep;
 
 class NormalDep extends Dep {
@@ -764,7 +779,7 @@ exports.TriggerDep = TriggerDep;
 
 // declassification by a user. take the dependencies of the cell referenced by
 // this dep and exempt them from the canRead check of the current cell if the
-// cell belongs to the same user of this dep. must be examine manually
+// cell belongs to the same user of this dep. must be examined manually
 // (canRead just returns true). also this is unsafe until we have hierarchical
 // dependencies.
 class DeclDep extends Dep {

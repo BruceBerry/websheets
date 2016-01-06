@@ -71,6 +71,7 @@ class Table {
               return c;
             var nc = c.deepClone();
             delete nc.ast;
+            delete nc.oldData;
             if (!ws.opts.debug && !ws.canRead(user, this.name, rIx, colName)) { 
               nc.src = "[[censored]]";
               nc.censored = true;

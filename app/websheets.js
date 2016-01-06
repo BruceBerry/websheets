@@ -11,6 +11,7 @@ var wsfuncs = require("./functions");
 
 class WebSheet {
   constructor(opts) {
+    this.generation = 0;
     this.users = {admin: {user: "admin", pass: "pass"}};
     this.input = {};
     this.output = {values:{}, permissions:{}};
@@ -40,14 +41,14 @@ class WebSheet {
     if (this.users[user])
       return false;
     this.users[user] = {user, pass};
-    this.trigger("createUser", user);
     return true;
   }
   deleteUser(user) {
     if (user === "admin" || !this.users[user])
       return false;
     delete this.users[user];
-    this.trigger("deleteUser", user);
+    // ideally this belongs in ws.trigger, but whatever
+    delete this.output.permissions[user];
     return true;
   }
   listUsers() {
@@ -106,20 +107,18 @@ class WebSheet {
     this.trigger("deleteRow", name, row);
   }
   writeCell(user, name, row, column, src) {
-    // TODO: update ownership if cells will have owners
-    var table = this.input[name];
-    var oldExpr = table.cells[row][column];
-    var newExpr = new i.Expr(src, oldExpr.cell);
-    if (newExpr.error)
-      throw `Cannot write new cell w/ syntax error: ${newExpr.error.toString()}`;
     var env = this.mkCellEnv(name, row, column, user);
-    var newVal;
+    var table = this.input[name];
+    // if the write permission does explicitly reference newVal,
+    // you can modify it to an erroneous value. this is on purpose.
     try {
-      newVal = newExpr.ast.eval(this, user, env.deepClone());
+      let oldExpr = table.cells[row][column];
+      let newExpr = new i.Expr(src, oldExpr.cell);
+      let newVal = newExpr.ast.eval(this, user, env.deepClone());
+      env.newVal = newVal;
     } catch (e) {
-      throw `Runtime error evaluating new expression`;
+      console.warn("NewVal", e);
     }
-    env.newVal = newVal;
     var permExpr = table.perms.write[column];
     var rowPermExpr = table.perms.write.row;
     var pExpr = i.combinePerms(permExpr, rowPermExpr);
@@ -157,7 +156,6 @@ class WebSheet {
     var expr = new i.Expr(src, "fromString");
     if (expr.error)
       throw expr.error;
-    debugger;
     return expr.ast.eval(this, user, {}).resolve(this);
   }
   mkTableEnv(name, user) {
@@ -227,6 +225,7 @@ class WebSheet {
         if (this.opts.verbose)
           console.log(`${user}:${name}.${row}.${col}.read = ${cell.data.toString()}`);
         cell.state = "evaluated";
+        cell.generation = this.generation;
         allDeps = _.every(cell.data.deps, d => d.canRead(this, user));
         return cell.data.asPerm() && allDeps;
       } catch(e) {
@@ -251,20 +250,122 @@ class WebSheet {
       this.output.values[name] = o.Table.fromInputTable(this.input[name]);
     return this.output.values[name].cells[row][col].censor(this, user, name, row, col);
   }
-  trigger(type, table, ...extra) {
+  loop(f) {
+    // executes the callback for all output cells and permission cached cells
+    var visitTable = (ot, isRead) => {
+      _(ot).each(table => {
+        _(table.cells).each((row, rowIx) => {
+          _(row).each((cell, colName) => {
+            if (colName === "_owner")
+              return;
+            var expr;
+            if (isRead) {
+              // combine perms
+              let it = this.input[table.name];
+              let cellP = it.perms.read[colName];
+              let rowP = it.perms.read.row;
+              expr = i.combinePerms(cellP, rowP);
+            } else {
+              expr = this.input[table.name].cells[rowIx][colName];
+            }
+            // console.log(`>>> looping on ${table.name}.${rowIx}.${colName}.${isRead}`);
+            f(table.name, rowIx, colName, expr, cell, isRead);
+          });
+        });
+      });
+    };
+    visitTable(this.output.values, false);
+    _(this.output.permissions).each(u => visitTable(u, true));
+  }
+  cellSupport(_name, _row, _col, f) {
+    // executes the callback on all the cells that depend on the selected cell
+    // (with NormalDep only)
+    this.loop((name, row, col, expr, cell, isRead) => {
+      if (cell.state !== "evaluated")
+        return;
+      _(cell.data.allDeps()).each(d => {
+        if (d instanceof ast.NormalDep && d.name === _name &&
+            d.row === _row && d.col === _col && d.recalculate === true) {
+          f(name, row, col, expr, cell, isRead);
+        }
+      });  
+    });
+  }
+  trigger(type, name, ...extra) {
     if (this.opts.verbose)
-      console.log("trigger", type, table);
-    // first, set all cell errors back to unevaluated!
+      console.log("trigger", type, name, extra);
+    this.generation++;
 
-    // - createUser(name)
-    // - deleteUser(name)
-    // - createTable(name)
-    // - deleteTable(name)
+    // first, set all cell errors back to unevaluated
+    this.loop(function(name, row, col, expr, cell, isRead) {
+      // parse errors are not our concern here, they have no dependencies
+      if (cell.state !== "error")
+        return;
+      console.log(`### resetting error cell ${name}.${row}.${col}`);
+      cell.state = "unevaluated";
+      cell.data = expr.deepClone();
+      delete cell.error;
+      delete cell.generation;
+    });
+
+    if (type === "write") {
+      let [row, col] = extra;
+      this.cellSupport(name, row, col, function(name, row, col, expr, cell, isRead) {
+        console.log(`>>> examining support cell ${name}.${row}.${col}.${isRead}`);
+        cell.state = "unevaluated";
+        cell.oldData = cell.data;
+        cell.data = expr.deepClone();
+      });
+      // this one does *not* become stale, it just becomes plain invalid
+      let cell = this.output.values[name].cells[row][col];
+      cell.state = "unevaluated";
+      cell.data = this.input[name].cells[row][col];
+      delete cell.generation;
+      delete cell.error;
+    } else if (type === "writePerm") {
+      // we invalidate the cached permission itself for all users
+      let [row, col] = extra;
+      _(this.output.permissions).map(up => {
+        let cell = up[name].cells[row][col];
+        cell.state = "unevaluated";
+        cell.data = this.input[name].cells[row][col];
+        delete cell.generation;
+        delete cell.error;
+      });
+      // and then follow along the support graph of the related value
+      // or NOT :-) because we always call canRead for all deps even if stuff
+      // is evaluated, so no one is really depending on the value of this
+      // permission cell.
+      // this.trigger("write", name, row, col);
+    } else if (type === "writeOwner") {
+      // we pretend we modified all cells of the row,
+      // so the code automatically goes after their support set
+      let [row] = extra;
+      var cols = this.input[name].columns;
+      _.each(cols, col => this.trigger("write", name, row, col));
+    } else if (type === "addRow") {
+      // update the cache to have another unevaluated row, then invalidate the support
+      // graph of row dependencies
+      // TODO: implement row permissions
+      var ot = this.output.values[name];
+      throw "AA";
+      ot.addRow()
+    } else if (type === "deleteRow") {
+      // same as addRow, plus invalidate any normaldep that refers to this row
+    } else if (type === "createTable") {
+      // nothing, we already create output tables on demand
+    } else if (type === "deleteTable") {
+      // delete cached tables, invalidate any normaldep that refers to this table
+    } else
+      throw `Unhandled trigger ${type}`;
+
+    // - write(name, row, col)
+    // - writePerm(name, perm, col)
+    // - writeOwner(name, row)
     // - addRow(name, row(optional))
     // - deleteRow(name, row, oldRow)
-    // - write(name, row, col, oldCell) // TODO: supply previous value/deps?
-    // - writePerm(name, perm, col, oldPerm)
-    // - writeOwner(name, row)
+    // - createTable(name)
+    // - deleteTable(name)
 
     // the operations above only modify input tables and users. trigger
     // handles the effect on output and permission cache tables, mainly by
@@ -308,8 +409,6 @@ class WebSheet {
     // thi stuff will be very slow without inverting the dependency graph into
     // a support graph, but i don't think i'm going to bother.
 
-    // deleteTable, writePerm, writeOwner
-    this.purge();
   }
 }
 cjson.register(WebSheet);
