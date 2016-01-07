@@ -101,7 +101,7 @@ class WebSheet {
     this.trigger("addRow", name, row || table.cells.length-1); // -1 b/c it just increased
   }
   deleteRow(user, name, row) {
-    var env = this.mkTableEnv(name, user);
+    var env = this.mkRowEnv(name, row, user);
     var expr = this.input[name].perms.del.row;
     if (expr.error)
       throw `Cannot delete row, error in expr ${expr.error.toString()}`;
@@ -175,13 +175,20 @@ class WebSheet {
       env.user = new ast.ScalarValue(user);
     return env;
   }
-  mkCellEnv(name, row, col, user) {
+  mkRowEnv(name, row, user) {
     var table = this.input[name];
     var env = this.mkTableEnv(name, user);
     Object.assign(env, {
       row: new ast.TableValue(name, row),
       rowIndex: new ast.ScalarValue(row),
       rowOwner: new ast.ScalarValue(table.cells[row]._owner),
+    });
+    return env;
+  }
+  mkCellEnv(name, row, col, user) {
+    var table = this.input[name];
+    var env = this.mkRowEnv(name, row, user);
+    Object.assign(env, {
       col: new ast.TableValue(name, undefined, col),
       colName: new ast.ScalarValue(col),
       cell: new ast.TableValue(name, row, col),
@@ -373,7 +380,8 @@ class WebSheet {
         console.warn("Only adding the last row is implemented correctly.");
       ot.addRow(this, row, false);
       _(this.output.permissions).each(up => {
-        up[name].addRow(this, row, true);
+        if (up[name])
+          up[name].addRow(this, row, true);
       });
     } else if (type === "deleteRow") {
       // same as addRow, plus invalidate any normaldep that refers to this row
@@ -383,7 +391,8 @@ class WebSheet {
         console.warn("Only deleting the last row is implemented correctly.");
       ot.deleteRow(row);
       _(this.output.permissions).each(up => {
-        up[name].deleteRow(row);
+        if (up[name])
+          up[name].deleteRow(row);
       });
       this.support(name, row, "*", function(name, row, col, expr, cell, isRead) {
         console.log(`>>> marking support cell ${name}.${row}.${col}.${isRead}`);
