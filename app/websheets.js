@@ -101,6 +101,7 @@ class WebSheet {
     this.trigger("addRow", name, row || table.cells.length-1); // -1 b/c it just increased
   }
   deleteRow(user, name, row) {
+    debugger;
     var env = this.mkRowEnv(name, row, user);
     var expr = this.input[name].perms.del.row;
     if (expr.error)
@@ -473,12 +474,17 @@ class WebSheet {
 
   }
   timeCheck() {
+    var newGen = false;
     this.loop((name, row, col, expr, cell, isRead) => {
       if (cell.state !== "evaluated")
         return;
       _(cell.data.allDeps()).each(d => {
         if (d instanceof ast.TimeDep && d.recalculate === true &&
           d.hasPassed()) {
+          if (!newGen) {
+            this.generation++;
+            newGen = true;
+          }
           cell.state = "unevaluated";
           cell.oldData = cell.data; // restore this iff dependencies are not stale
           cell.data = expr.deepClone();

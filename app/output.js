@@ -34,8 +34,7 @@ class Table {
     this.cells.splice(row, 0, orow);
   }
   deleteRow(row) {
-    debugger;
-    this.cells.splice(i, 1);
+    this.cells.splice(row, 1);
   }
   censor(ws, user) {
     var copy = this.deepClone();
