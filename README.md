@@ -28,9 +28,9 @@ Below is the abstract of the paper:
 - Execute I/O upon evaluation (e.g. send mail)
 - Time-based triggers
 - Dependency analysis of formulas to minimize recalculation upon changes
+- Support for declassification
 
 ### In Progress
 
-- Support for declassification
 - Execute imperative scripts in a sandbox
 - More involved examples
