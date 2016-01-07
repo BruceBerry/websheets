@@ -21,10 +21,10 @@ _.map(methods.ws, function(m) {
   return m;
 });
 
-console.log("### WebSheet methods:")
+console.log("### WebSheet methods:");
 _.each(methods.ws, function(m) {
   console.log(m.name + "\t\t" + m.defined);
-})
+});
 
 console.log("\n### JSON Api");
 re = /app\.(\w+)\("([\/\w\-:]+)"/ig;

@@ -51,7 +51,7 @@ var reviver = function(k, v) {
 };
 
 var register = exports.register = function(klass) {
-  var name = klass._json || klass.name
+  var name = klass._json || klass.name;
   var proto = klass.prototype;
   cache[name] = proto;
-}
+};

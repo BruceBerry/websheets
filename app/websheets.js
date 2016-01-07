@@ -101,7 +101,6 @@ class WebSheet {
     this.trigger("addRow", name, row || table.cells.length-1); // -1 b/c it just increased
   }
   deleteRow(user, name, row) {
-    debugger;
     var env = this.mkRowEnv(name, row, user);
     var expr = this.input[name].perms.del.row;
     if (expr.error)
@@ -240,8 +239,6 @@ class WebSheet {
           console.log(`${user}:${name}.${row}.${col}.read = ${cell.data.toString()}`);
         cell.state = "evaluated";
         cell.generation = this.generation;
-        // admin:Event.0.Public.read = false
-        debugger;
         allDeps = _.every(cell.data.deps, d => d.canRead(this, user, whitelist));
         return cell.data.asPerm() && allDeps;
       } catch(e) {
@@ -345,17 +342,24 @@ class WebSheet {
       this.support(name, row, col, function(name, row, col, expr, cell, isRead) {
         console.log(`>>> marking support cell ${name}.${row}.${col}.${isRead}`);
         cell.state = "unevaluated";
-        cell.oldData = cell.data; // restore this iff dependencies are not stale
+        cell.oldData = cell.data; // do not update generation if newData.equals(oldData)
+        cell.oldData.revive = true; // also restore this iff dependencies are not stale
         cell.data = expr.deepClone();
       });
-      // this one does *not* become stale, it just becomes plain invalid
+      // this one also get saved, but you should only use oldData to decide whether
+      // to advance the generation, not to decide whether you are resurrecting the
+      // old value
       let cell = this.output.values[name].cells[row][col];
-      cell.state = "unevaluated";
-      cell.data = this.input[name].cells[row][col];
-      delete cell.generation;
+      if (cell.state === "evaluated") {
+        cell.state = "unevaluated";
+        cell.oldData = cell.data;
+        cell.oldData.revive = false;
+        cell.data = this.input[name].cells[row][col].deepClone();
+      }
       delete cell.error;
     } else if (type === "writePerm") {
       // we invalidate the cached permission itself for all users
+      // no use for oldData because no other cell depends on a permission cell
       let [row, col] = extra;
       _(this.output.permissions).map(up => {
         let cell = up[name].cells[row][col];
@@ -401,6 +405,7 @@ class WebSheet {
         console.log(`>>> marking support cell ${name}.${row}.${col}.${isRead}`);
         cell.state = "unevaluated";
         cell.oldData = cell.data; // restore this iff dependencies are not stale
+        cell.oldData.revive = true;
         cell.data = expr.deepClone();
       });
     } else if (type === "createTable") {
@@ -413,6 +418,7 @@ class WebSheet {
         console.log(`>>> marking support cell ${name}.${row}.${col}.${isRead}`);
         cell.state = "unevaluated";
         cell.oldData = cell.data; // restore this iff dependencies are not stale
+        cell.oldData.revive = true;
         cell.data = expr.deepClone();
       });
     } else

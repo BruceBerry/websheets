@@ -106,35 +106,6 @@ function interact(table, mode) {
   });
 }
 
-
-function printCell(c) {
-  // TODO: this must be done in the server!
-  if (c.perm.type !== "evaluated")
-    return c.perm.type;
-  if (c.perm.value.perm === false || c.perm.value.value === false)
-    return DENIED;
-  if (c.value.type !== "evaluated")
-    return c.value.type;
-  return printValue(c.value.value);
-}
-
-function printValue(v, rowPerm) {
-  if (v.perm === false)
-    return DENIED;
-  if (v == null)
-    return "null";
-  if (Array.isArray(v.value))
-    return "[" + v.value.map(x => printValue(x)).join(", ") + "]";
-  // change them to WS syntax
-  if (v.value === true)
-    return "True";
-  if (v.value === false)
-    return "False";
-  if (typeof v.value == "string")
-    return '"' + v.value + '"';
-  return v.value;
-}
-
 function cleanJunk(wf) {
   if (!config.clean)
     return wf;
@@ -149,7 +120,7 @@ function cleanJunk(wf) {
 
 // current set of tables and column names
 var keywords = {};
-var joinkw = kws => new RegExp("\\b(" + kws.join("|") + ")\\b", "g")
+var joinkw = kws => new RegExp("\\b(" + kws.join("|") + ")\\b", "g");
 var updateKeywords = function() {
   $.get("/debug/keywords")
     .done(function(kw) {
@@ -171,7 +142,7 @@ var updateKeywords = function() {
       ]);
     })
     .fail(() => console.log("Keywords currently unavailable"));
-}
+};
 updateKeywords();
 function highlight(wf) {
   if (!config.highlight) {

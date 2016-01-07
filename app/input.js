@@ -25,7 +25,7 @@ class Table {
       var newCell = `${this.name}.${i}.${name}`;
       if (e.cell) {
         e.cell = newCell;
-        e.ast.visitAll(n => { n.loc.cell = newCell });
+        e.ast.visitAll(n => { n.loc.cell = newCell; });
         e._owner = user;
       }
       return e;
@@ -151,7 +151,7 @@ Object.defineProperty(Object.prototype, "deepClone", { value:
       return new Date(this.getTime());
     } else if (typeof this === "object") {
       var obj = Object.create(this.__proto__);
-      Object.keys(this).forEach(k => { obj[k] = this[k] ? this[k].deepClone() : this[k] });
+      Object.keys(this).forEach(k => { obj[k] = this[k] ? this[k].deepClone() : this[k]; });
       return obj;
     } else
       return this;

@@ -29,4 +29,7 @@ api:
 todo:
 	grep "TODO" *.js app/*.js
 
-.PHONY: watch api todo clean debug bdebug
+lint:
+	jshint *.js; cd app; jshint *.js; cd ../static; jshint *.js
+
+.PHONY: watch api todo clean debug bdebug lint

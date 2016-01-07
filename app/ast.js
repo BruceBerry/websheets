@@ -492,6 +492,9 @@ class Value {
   }
   allDeps() { return this.deps.deepClone(); }
   asPerm() { throw `Permissions must return boolean values, not ${this.toString()}`; }
+  equals(v) {
+    return this.toString() === v.toString() && this.allDeps().toString() === v.allDeps().toString();
+  }
 }
 Value.censor = "##";
 exports.Value = Value;
@@ -594,7 +597,21 @@ class TableValue extends Value {
             cell.data = cell.data.error.toString();
             throw cell.data;
           }
-          // runtime error
+          if (cell.oldData && cell.oldData.revive) {
+            // attempt to revive cell
+            cell.state = "evaluating";
+            var allFresh = _(cell.oldData.deps).every(d => d.isFresh(ws, user, cell.generation));
+            if (allFresh) {
+              cell.state = "evaluated";
+              cell.data = cell.oldData;
+              if (ws.opts.verbose)
+                console.log(`recovered ${this.name}.${this.row}.${this.col} = ${cell.data.toString()}`);
+              let retval = cell.data.deepClone();
+              return retval.addDeps(new NormalDep(this.name, this.row, this.col));
+            }
+            cell.state = "unevaluated";
+            // continue, the generation might still not be updated
+          }
           cell.state = "evaluating";
           if (ws.opts.verbose)
             console.log(`evaluating ${this.name}.${this.row}.${this.col}`);
@@ -602,13 +619,19 @@ class TableValue extends Value {
           try {
             cell.data = cell.data.ast.eval(ws, user, env).resolve(ws, user);
             if (ws.opts.verbose)
-              console.log(`${this.name}.${this.row}.${this.col} = ${cell.data.toString()}`);
+              console.log(`evaluated ${this.name}.${this.row}.${this.col} = ${cell.data.toString()}`);
             // callers get the cell as a dep, but the cached cell itself doesn't.
             cell.state = "evaluated";
-            cell.generation = ws.generation;
+            if (!cell.oldData || !cell.data.equals(cell.oldData))
+              cell.generation = ws.generation;
+            else
+              console.log("same value");
+            delete cell.oldData;
             var retval = cell.data.deepClone();
             return retval.addDeps(new NormalDep(this.name, this.row, this.col));
           } catch(e) {
+          // runtime error
+            delete cell.oldData;
             cell.state = "error";
             cell.data = e.toString();
             if (ws.opts.verbose)
@@ -721,7 +744,8 @@ class Dep {
     this.recalculate = true;
   }
   toString() { throw "Dep::toString: abstract class"; }
-  canRead() { throw "Dep::canRead: abstract class"; }
+  canRead(ws, user) { return true; }  
+  isFresh(ws, user, generation) { return true; }
 }
 Dep.uniqFun = d => d instanceof NormalDep ? d.toString() : {};
 exports.Dep = Dep;
@@ -742,6 +766,23 @@ class NormalDep extends Dep {
     if (_.find(whitelist, d => d instanceof NormalDep && d.toString() === this.toString()) !== undefined)
       return true;
     return !this.enforce || ws.canRead(user, this.name, this.row, this.col, whitelist.concat([this]));
+  }
+  isFresh(ws, user, generation) {
+    var cell = ws.output.values[this.name].cells[this.row][this.col];
+    if (cell.state === "error")
+      return false;
+    if (cell.state === "unevaluated") {
+      // TODO: maybe cells need an eval method, so i can factor out the similar
+      // code in ws.canRead and TableValue.resolve
+      try {
+        ws.evalString(user, `${this.name}.${this.row}.${this.col}`);
+      } catch (e) {
+        console.log(`isFresh: ${e.toString()}`);
+        return false;
+      }
+    }
+    // now you can check if the evaluated value is really fresh
+    return cell.generation <= generation;
   }
 }
 exports.NormalDep = NormalDep;
@@ -769,7 +810,6 @@ class TimeDep extends Dep {
     this.date = date;
   }
   toString() { return "AFTER " + this.date.toString(); }
-  canRead() { return true; }
   hasPassed() { return this.date <= new Date(); }
 }
 exports.TimeDep = TimeDep;
@@ -781,7 +821,6 @@ class TriggerDep extends TimeDep {
     this.user = user;
   }
   toString() { return `${this.user}>>${this.date.toString()}`; }
-  canRead() { return true; }
 }
 exports.TriggerDep = TriggerDep;
 
@@ -799,7 +838,6 @@ class DeclDep extends Dep {
     this.col = col;
   }
   toString() { return `${this.user}!${this.name}.${this.row}.${this.col}`; }
-  canRead() { return true; }
 }
 exports.DeclDep = DeclDep;
 

@@ -2,6 +2,7 @@
   "jquery": true,
   "esnext": true,
   "browser": true,
+  "devel": true,
   "globals": {
     "routie": true,
     "routes": true,
@@ -9,6 +10,11 @@
     "renderInputTable": true,
     "renderOutputTable": true,
     "keywords": true,
-    "config": true
+    "config": true,
+    "Handlebars": true,
+    "highlight": true,
+    "cleanJunk": true,
+    "displayError": true,
+    "doError": true
   }
 }

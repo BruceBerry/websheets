@@ -12,7 +12,7 @@ var config = {
 
 var lh = function(hash) {
   location.hash = "#" + hash;
-} 
+}; 
 
 // always allow window
 Handlebars._compile = Handlebars.compile;
@@ -129,9 +129,7 @@ var routes = {
       $("#table-create-button").click(function() {
         $.post("/table/create", $("#table-create-form").serialize())
           .done(routes.tableList)
-          .fail(function(res) {
-            displayError(res.responseText)
-          });
+          .fail(res => displayError(res.responseText));
       });
     });
   },
@@ -266,7 +264,7 @@ $(document).ready(function() {
    "import", "admin", "input", "output"].forEach(
     n => templates[n] = Handlebars.compile($(`#${n}-template`).html())
   );
-  Handlebars.registerPartial('drop', templates.drop)
+  Handlebars.registerPartial('drop', templates.drop);
 
 
   // starts by figuring out if the user is logged in

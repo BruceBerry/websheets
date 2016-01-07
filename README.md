@@ -27,10 +27,10 @@ Below is the abstract of the paper:
 - Full-featured web interface.
 - Execute I/O upon evaluation (e.g. send mail)
 - Time-based triggers
+- Dependency analysis of formulas to minimize recalculation upon changes
 
 ### In Progress
 
-- Dependency analysis of formulas to minimize recalculation upon changes
 - Support for declassification
 - Execute imperative scripts in a sandbox
 - More involved examples

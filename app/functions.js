@@ -129,7 +129,7 @@ var vToDate = function(v) {
     d = new Date(v.value);
   else if (typeof v.value === "number") {
     d = new Date();
-    d.setSeconds(d.getSeconds()+v.value)
+    d.setSeconds(d.getSeconds()+v.value);
   }
   if (isNaN(d.getYear()))
     throw `Invalid date format: ${v.toString()}`;
