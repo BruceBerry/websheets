@@ -85,19 +85,29 @@ module.exports = {
   },
   TRUST: function(ws, user, env, v) {
     // remove the canRead effect of its dependencies, basically re-publishing
-    // the object as yours. must be able to read all its dependencies to assume
-    // ownership, either as the user evaluating it or as the cell
-    // owner.
+    // the object as yours. the owner will turn off enforcing for all dependencies
+    // that he has access to.
+    v = v.resolve(ws, user);
+    var name, row, col, owner;
     try {
-      var {name: {tableName: value},
-           row: {rowIndex: value},
-           col: {colName: value},
-           owner: {owner: value}
-          } = env;
+      name = env.tableName.value;
+      row = env.rowIndex.value;
+      col = env.colName.value;
+      owner = env.owner.value;
     } catch (e) {
+      console.log(e);
       throw `Cannot use TRUST in a non-cell context`; 
     }
-    return v.addDeps(new ast.DeclDep(owner, name, row, col));
+    // go through the deps and set enforce = false on all those deps that can
+    // be read by the cell owner.
+    v.visitAll(n => {
+      _(n.deps).each(d => {
+        if (d instanceof ast.NormalDep && d.canRead(ws, owner))
+          d.enforce = false;
+      });
+    });
+    // no decldep
+    return v;
   },
   AFTER: function(ws, user, env, v) {
     var d = vToDate(v);
@@ -107,12 +117,12 @@ module.exports = {
   },
   TRIGGER: function(ws, user, env, v) {
     var d = vToDate(v);
+    var name, row, col, owner;
     try {
-      var {name: {tableName: value},
-           row: {rowIndex: value},
-           col: {colName: value},
-           owner: {owner: value}
-          } = env;
+      name = env.tableName.value;
+      row = env.rowIndex.value;
+      col = env.colName.value;
+      owner = env.owner.value;  
     } catch (e) {
       throw `Cannot use TRIGGER in a non-cell context`;
     }
