@@ -737,9 +737,11 @@ class NormalDep extends Dep {
   toString() {
     return `${this.name}.${this.row}.${this.col}[${this.recalculate?"r":""}${this.enforce?"e":""}]`;
   }
-  canRead(ws, user) {
-    // console.log("canRead", this.toString());
-    return !this.enforce || ws.canRead(user, this.name, this.row, this.col);
+  canRead(ws, user, whitelist=[]) {
+    // solve permission loops by building up a whitelist in the call stack
+    if (_.find(whitelist, d => d instanceof NormalDep && d.toString() === this.toString()) !== undefined)
+      return true;
+    return !this.enforce || ws.canRead(user, this.name, this.row, this.col, whitelist.concat([this]));
   }
 }
 exports.NormalDep = NormalDep;

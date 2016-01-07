@@ -201,11 +201,11 @@ class WebSheet {
   import(user, filename) {
     importer.import(this, user, filename);
   }
-  canRead(user, name, row, col) {
-    var result = this._canRead(user, name, row, col);
+  canRead(user, name, row, col, whitelist=[]) {
+    var result = this._canRead(user, name, row, col, whitelist);
     return result || (user === "admin" && this.opts.adminReads);
   }
-  _canRead(user, name, row, col) {
+  _canRead(user, name, row, col, whitelist=[]) {
     if (!this.output.permissions[user])
       this.output.permissions[user] = {};
     var userPerms = this.output.permissions[user];
@@ -221,7 +221,7 @@ class WebSheet {
     if (cell.state === "evaluating")
       throw `Perm Loop`;
     else if (cell.state === "evaluated") {
-      allDeps = _.every(cell.data.deps, d => d.canRead(this, user));
+      allDeps = _.every(cell.data.deps, d => d.canRead(this, user, whitelist));
       return cell.data.asPerm() && allDeps;
     } else if (cell.state === "error")
       return false;
@@ -242,7 +242,7 @@ class WebSheet {
         cell.generation = this.generation;
         // admin:Event.0.Public.read = false
         debugger;
-        allDeps = _.every(cell.data.deps, d => d.canRead(this, user));
+        allDeps = _.every(cell.data.deps, d => d.canRead(this, user, whitelist));
         return cell.data.asPerm() && allDeps;
       } catch(e) {
         cell.state = "error";
