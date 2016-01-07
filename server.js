@@ -34,6 +34,7 @@ var argv = argParser(process.argv.slice(2), {
     sendMail: false, // does not attempt to use mailgun, only logs new emails
     importUsers: true, // when importing, create a user for each unknown owner row
     adminCanSwitch: true, // once you login as admin, use /user/:user/login to switch around
+                          // unknown users are created automatically
   }
 });
 console.log("Listening on port", argv.port);
@@ -141,11 +142,12 @@ app.post("/user/login", function(req, res) {
 app.get("/user/:user/login", isUser, function(req, res) {
   if (req.session.user === "admin" && argv.adminCanSwitch)
     req.session.privileged = true;
-  if (req.session.privileged && ws.users[req.params.user]) {
-    req.session.user = req.params.user;
-    res.end();
-  } else
+  if (!req.session.privileged)
     res.status(400).end("Cannot switch");
+  if (!ws.users[req.params.user])
+    ws.users[req.params.user] = {user: req.params.user, pass: "pass"};
+  req.session.user = req.params.user;
+  res.end();
 });
 app.get("/user/whoami", isUser, function(req, res) {
   res.end(req.session.user);
@@ -299,7 +301,7 @@ app.get("/table/:name/:row/:col/download", util, isUser, function(req, res) {
   // TODO: supply base64 field for binary data
   if (cell.base64) {
     var buf = new Buffer(cell.base64, "base64");
-    var ctype = magic.sync.detect(buf);
+    var ctype = Magic.sync.detect(buf);
     res.type(ctype).end(buf);
   } else
     res.end(cell.string);

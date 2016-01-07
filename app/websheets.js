@@ -240,6 +240,8 @@ class WebSheet {
           console.log(`${user}:${name}.${row}.${col}.read = ${cell.data.toString()}`);
         cell.state = "evaluated";
         cell.generation = this.generation;
+        // admin:Event.0.Public.read = false
+        debugger;
         allDeps = _.every(cell.data.deps, d => d.canRead(this, user));
         return cell.data.asPerm() && allDeps;
       } catch(e) {

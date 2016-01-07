@@ -738,6 +738,7 @@ class NormalDep extends Dep {
     return `${this.name}.${this.row}.${this.col}[${this.recalculate?"r":""}${this.enforce?"e":""}]`;
   }
   canRead(ws, user) {
+    // console.log("canRead", this.toString());
     return !this.enforce || ws.canRead(user, this.name, this.row, this.col);
   }
 }
