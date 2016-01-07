@@ -26,11 +26,11 @@ Below is the abstract of the paper:
 - Can run examples found in the NSPW 2015 paper
 - Full-featured web interface.
 - Execute I/O upon evaluation (e.g. send mail)
+- Time-based triggers
 
 ### In Progress
 
 - Dependency analysis of formulas to minimize recalculation upon changes
 - Support for declassification
 - Execute imperative scripts in a sandbox
-- Time-based triggers
 - More involved examples

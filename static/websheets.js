@@ -10,6 +10,10 @@ var config = {
   highlight: true
 };
 
+var lh = function(hash) {
+  location.hash = "#" + hash;
+} 
+
 // always allow window
 Handlebars._compile = Handlebars.compile;
 Handlebars.compile = function(...args) {
@@ -124,9 +128,7 @@ var routes = {
       });
       $("#table-create-button").click(function() {
         $.post("/table/create", $("#table-create-form").serialize())
-          .done(function() {
-            routes.tableList();
-          })
+          .done(routes.tableList)
           .fail(function(res) {
             displayError(res.responseText)
           });
@@ -195,7 +197,7 @@ var routes = {
         processData: false,
         contentType: false,
         type: 'POST'
-      }).done(routes.tableList)
+      }).done(() => lh("table/list"))
         .fail(res => displayError(res.responseText));
     });
   },
