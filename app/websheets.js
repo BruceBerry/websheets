@@ -360,6 +360,7 @@ class WebSheet {
     } else if (type === "writePerm") {
       // we invalidate the cached permission itself for all users
       // no use for oldData because no other cell depends on a permission cell
+      // TODO: what about row permissions?
       let [row, col] = extra;
       _(this.output.permissions).map(up => {
         let cell = up[name].cells[row][col];
