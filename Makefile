@@ -12,6 +12,15 @@ watch:
     jade -P static/; \
   done
 
+run:
+	jade -P static/
+	jison app/wf.jison -o app/wf.js
+	nodemon -- $(es6flags) server.js
+
+dockerrun:
+	git pull
+	make run
+
 debug:
 	node -- debug $(es6flags) server.js
 
@@ -32,4 +41,4 @@ todo:
 lint:
 	jshint *.js; cd app; jshint *.js; cd ../static; jshint *.js
 
-.PHONY: watch api todo clean debug bdebug lint
+.PHONY: watch run dockerrun api todo clean debug bdebug lint

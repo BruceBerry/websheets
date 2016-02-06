@@ -316,7 +316,7 @@ class WebSheet {
             d.recalculate === true) {
           f(name, row, col, expr, cell, isRead);
         }
-      });  
+      });
     });
   }
   trigger(type, name, ...extra) {
