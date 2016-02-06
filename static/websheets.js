@@ -33,6 +33,9 @@ Handlebars.registerHelper({
   ifError: function(expr) {
     return expr.error ? "wf-error" : "";
   },
+  not: function(v) {
+    return !v;
+  },
   eq: function (v1, v2) {
         return v1 === v2;
   },

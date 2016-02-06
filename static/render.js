@@ -3,16 +3,20 @@ var pwf = src => highlight(cleanJunk(src));
 
 function renderInputTable(table) {
   document.title = `${table.name} - Input View`;
-  $("#content").html(templates.input({table}));
 
-  interact(table, "input");
+  $.getJSON("/table/list", function(tables) {
+    $("#content").html(templates.input({table,tables}));
+    interact(table, "input");
+  });
 }
 
 function renderOutputTable(table) {
   document.title = `${table.name} - Output View`;
-  $("#content").html(templates.output({table}));
-  
-  interact(table, "output");
+
+  $.getJSON("/table/list", function(tables) {
+    $("#content").html(templates.output({table, tables}));
+    interact(table, "output");
+  });
 }
 
 function interact(table, mode) {

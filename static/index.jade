@@ -259,6 +259,20 @@ block content
 
     <p><button id='add-row' class='btn btn-default'>Add Row</button></p>
 
+    <p class="text-center">[
+      {{#each tables}}
+        <b>
+          {{#if (eq this.name ../table.name)}}
+            {{this.name}}
+          {{else}}
+            <a href="#table/{{this.name}}/input">{{this.name}}</a>
+          {{/if}}
+        </b>
+        {{#if (not @last)}} - {{/if}}          
+      {{/each}}]
+    </p>
+
+
   +template#output-template.
     <h1>
       {{table.name}} <small>by {{table.owner}}</small>
@@ -296,3 +310,16 @@ block content
     </table>
 
     <p><button id='add-row' class='btn btn-default'>Add Row</button></p>
+
+    <p class="text-center">[
+      {{#each tables}}
+        <b>
+          {{#if (eq this.name ../table.name)}}
+            {{this.name}}
+          {{else}}
+            <a href="#table/{{this.name}}/output">{{this.name}}</a>
+          {{/if}}
+        </b>
+        {{#if (not @last)}} - {{/if}}          
+      {{/each}}]
+    </p>
