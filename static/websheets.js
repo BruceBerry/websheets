@@ -183,6 +183,7 @@ var routes = {
     });
   },
   import: function() {
+    document.title = "XLS Import";
     $(".alert").fadeOut();
     $("#content").html(templates.import());
 
@@ -203,7 +204,7 @@ var routes = {
     });
   },
   admin: function() {
-
+    document.title = "Admin Console";
     $.getJSON("/user/list", function(users) {
 
       $(".alert").fadeOut();
