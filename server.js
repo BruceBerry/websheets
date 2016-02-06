@@ -251,9 +251,12 @@ app.get("/table/:name/output", util, isUser, function(req, res) {
 app.post("/table/:name/edit", util, isUser, function(req, res) {
   var name = req.params.name;
   var {perm, column, src, row} = req.body;
-  row = Number(row);
-  if (isNaN(row)) throw "NaN";
+
   // double as both privileged and normal cell editing
+  if (!perm) {
+    row = Number(row);
+    if (isNaN(row)) throw "NaN";
+  }
   if (perm) {
     isOwnerOrAdmin(req, res, function() {
       ws.input[name].perms[perm][column] =

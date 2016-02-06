@@ -162,6 +162,14 @@ block content
       </div>
     </p>
 
+    <h3>Switch to User</h3>
+    <form class="form-inline">
+      <select class="form-control" id="select-user">
+        {{#each users}}
+          <option>{{user}}</option>
+        {{/each}}
+      </select>
+
   +template#input-template.
     <h1>
       {{table.name}} <small>by {{table.owner}}</small>

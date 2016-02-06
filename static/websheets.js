@@ -203,52 +203,60 @@ var routes = {
     });
   },
   admin: function() {
-    $(".alert").fadeOut();
-    $("#content").html(templates.admin());
+
+    $.getJSON("/user/list", function(users) {
+
+      $(".alert").fadeOut();
+      $("#content").html(templates.admin({users}));
 
 
 
-    $("#save-btn").on("click", function() {
-      $.post("/admin/save")
-        .done(() => displayMessage("State Saved."))
-        .fail(res => doError(res.statusText));
+      $("#save-btn").on("click", function() {
+        $.post("/admin/save")
+          .done(() => displayMessage("State Saved."))
+          .fail(res => doError(res.statusText));
+      });
+
+      $("#load-btn").on("click", function(e) {
+        var f = $("#loadstate")[0].files[0];
+        if (!f)
+          return;
+        var fd = new FormData();
+        fd.append("load", f);
+        $.ajax({
+          url: "/admin/load",
+          data: fd,
+          processData: false,
+          contentType: false,
+          type: 'POST'
+        }).done(() => displayMessage("State Loaded."))
+          .fail(res => displayError(res.responseText));
+      });
+
+      $("#quit-btn").on("click", function() {
+        $.post("/admin/quit")
+          .done(() => displayMessage("WebSheet server terminated."))
+          .fail(res => displayError(res.responseText));
+      });
+
+      $("#purge-btn").on("click", function() {
+        $.post("/admin/purge")
+          .done(() => displayMessage("Cache Purged."))
+          .fail(res => displayError(res.responseText));
+      });
+
+      $("#reset-btn").on("click", function() {
+        $.post("/admin/reset")
+          .done(() => displayMessage("All tables and users (except for admin) have been deleted."))
+          .fail(res => displayError(res.responseText));
+      });
+
+      $("#select-user").on("click", function() {
+        $.getJSON(`/user/${this.value}/login`);
+        // do not update, use this in another window
+      })
+
     });
-
-    $("#load-btn").on("click", function(e) {
-      var f = $("#loadstate")[0].files[0];
-      if (!f)
-        return;
-      var fd = new FormData();
-      fd.append("load", f);
-      $.ajax({
-        url: "/admin/load",
-        data: fd,
-        processData: false,
-        contentType: false,
-        type: 'POST'
-      }).done(() => displayMessage("State Loaded."))
-        .fail(res => displayError(res.responseText));
-    });
-
-    $("#quit-btn").on("click", function() {
-      $.post("/admin/quit")
-        .done(() => displayMessage("WebSheet server terminated."))
-        .fail(res => displayError(res.responseText));
-    });
-
-    $("#purge-btn").on("click", function() {
-      $.post("/admin/purge")
-        .done(() => displayMessage("Cache Purged."))
-        .fail(res => displayError(res.responseText));
-    });
-
-    $("#reset-btn").on("click", function() {
-      $.post("/admin/reset")
-        .done(() => displayMessage("All tables and users (except for admin) have been deleted."))
-        .fail(res => displayError(res.responseText));
-    });
-
-    // TODO: load, save and download
 
   },
   error: function() {
