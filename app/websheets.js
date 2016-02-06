@@ -361,13 +361,28 @@ class WebSheet {
       // we invalidate the cached permission itself for all users
       // no use for oldData because no other cell depends on a permission cell
       // TODO: what about row permissions?
+      console.log("extra", extra);
       let [row, col] = extra;
+      // this only makes sense for row == "read"
+      if (row !== "read")
+        throw "weird trigger";
+      // a modification to the row permission causes a change in *all* cells.
+      if (col === "row") {
+        _.map(this.input[name].cols, c => this.trigger("writePerm", name, row, col));
+        return;
+      }
       _(this.output.permissions).map(up => {
-        let cell = up[name].cells[row][col];
-        cell.state = "unevaluated";
-        cell.data = this.input[name].cells[row][col];
-        delete cell.generation;
-        delete cell.error;
+        let table = up[name];
+        if (table)
+          _.each(table.cells, pr => {
+            let cell = pr[col];
+            cell.state = "unevaluated";
+            let cexpr = this.input[name].perms[row][col];
+            let rexpr = this.input[name].perms[row].row;
+            cell.data = i.combinePerms(cexpr, rexpr);
+            delete cell.generation;
+            delete cell.error;
+          });
       });
       // because we always loop on all deps in canRead even if a cell has
       // already been evaluated, no one is really depending on the value of
