@@ -91,3 +91,7 @@ td.editable > code {
     cursor: text;
     outline: 0px solid transparent;
 }
+
+th.grey-hidden {
+  color: #aaaaaa;
+}

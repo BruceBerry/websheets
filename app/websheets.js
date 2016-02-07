@@ -21,7 +21,8 @@ class WebSheet {
     // must be cleared on the server
     this.intervalID = setInterval(() => this.timeCheck(), 10*1000);
     this.timeCheck();
-    this.createTable("admin", "prova", "here", ["a", "bb", "ab"], [{}, {}, {}]);
+    this.createTable("admin", "prova", "here", ["a", "bb", "ab"],
+      [{description: "a"}, {description: "-bb"}, {description: "c<br>c\nc\"c", hidden: true}]);
     this.input.prova.addRow("admin");
   }
 
@@ -156,7 +157,21 @@ class WebSheet {
     }
     if (!this.output.values[name])
       this.output.values[name] = o.Table.fromInputTable(this.input[name]);
-    return this.output.values[name].censor(this, user);
+    var otable = this.output.values[name].censor(this, user);
+    // some of this stuff could be copied directly in o.fromInputTable,
+    // but it is not useful in computations so we do it here
+    // 1. spread metadata (control & hidden) to each cell
+    _.each(otable.cells, row => {
+      _.each(row, (cell, colName) => {
+        if (colName === "_owner")
+          return;
+        var colMeta = _.findWhere(otable.meta, {name: colName});
+        cell.control = colMeta.control;
+        cell.hidden = colMeta.hidden;
+      });
+    });
+    // 2. TODO delete uncensored binary data and replace w/ size, handling encoding
+    return otable;
   }
   evalString(user, src) {
     var expr = new i.Expr(src, "fromString");

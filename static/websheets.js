@@ -7,8 +7,17 @@ var templates = {};
 
 var config = {
   clean: false,
-  highlight: true
+  highlight: true,
+  showHidden: true // show hidden fields in output tables (always shown in input tables)
 };
+
+// TODO: does removing hidden column cause bugs b/c of relative positioning?
+
+// TODO: not sure if description needs to be a textarea, because tooltips have
+// word wrap so you don't really control line wraps anyway.
+
+// TODO: why is 'w' provided into the cell context? we really need to stop overriding Handlebars.compile
+
 
 var lh = function(hash) {
   location.hash = "#" + hash;
@@ -53,6 +62,12 @@ Handlebars.registerHelper({
   },
   inc: function(i) {
     return i+1;
+  },
+  wrap: function(s) {
+    return s.replace(/\n/g, "<br>");
+  },
+  attrEscape: function(s) { // otherwise < and > are unescaped in tooltips
+    return s.replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
 });
 

@@ -41,6 +41,8 @@ var argv = argParser(process.argv.slice(2), {
 });
 console.log("Listening on port", argv.port);
 
+// TODO: sending owner in output tables should be controlled by debug or a new flag
+
 _.mixin({
   // preserves the prototype chain
   omitClone: function(obj, ...names) {

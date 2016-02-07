@@ -21,6 +21,12 @@ function renderOutputTable(table) {
 
 function interact(table, mode) {
 
+  $('[data-toggle="tooltip"]').tooltip({
+    container: "body",
+    html: true
+  });
+
+  
   var sel = "td:not(.disabled):not(.side-opt)";
   $(sel).on("mouseenter", function() {
     var $this = $(this);
