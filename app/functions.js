@@ -48,6 +48,7 @@ module.exports = {
     return new ast.ScalarValue(result).addDeps(args);
   },
   MAIL: function(ws, user, env, ...args) {
+    // TODO: user recipient does not use canRead
     var [recipient, subject, text] = _.map(args, v => v.toCensoredJSValue(ws, user));
     _.each([recipient, subject, text], v => {
       if (typeof v !== "string") throw `${v.toString()} is not a string`;

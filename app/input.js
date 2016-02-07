@@ -7,11 +7,12 @@ var cjson = require("./cjson");
 var ast = require("./ast");
 
 class Table {
-  constructor(name, description, owner, columns) {
+  constructor(name, description, owner, columns, meta) {
     this.name = name;
     this.description = description;
     this.owner = owner;
     this.columns = columns;
+    this.meta = meta;
     this.perms = allowAll(name, columns);
     this.cells = [];
   }
@@ -55,6 +56,7 @@ class Table {
       description: this.description,
       owner: this.owner,
       columns: this.columns,
+      meta: this.meta,
       perms: _.mapObject(this.perms,
         p => _.mapObject(p,
           c => {

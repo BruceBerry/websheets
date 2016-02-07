@@ -21,7 +21,7 @@ class WebSheet {
     // must be cleared on the server
     this.intervalID = setInterval(() => this.timeCheck(), 10*1000);
     this.timeCheck();
-    this.createTable("admin", "prova", "here", ["a", "bb", "ab"]);
+    this.createTable("admin", "prova", "here", ["a", "bb", "ab"], [{}, {}, {}]);
     this.input.prova.addRow("admin");
   }
 
@@ -77,8 +77,8 @@ class WebSheet {
       functions: _.keys(this.functions).concat(_.keys(this.scripts))
     };
   }
-  createTable(user, name, desc, columns) {
-    this.input[name] = new i.Table(name, desc, user, columns);
+  createTable(user, name, desc, columns, meta) {
+    this.input[name] = new i.Table(name, desc, user, columns, meta);
     this.trigger("createTable", name);
     return true;
   }

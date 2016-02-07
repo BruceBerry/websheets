@@ -233,9 +233,12 @@ app.post("/table/create", isUser, function(req,res) {
   if (ws.input[req.body.name])
     res.status(403).end("Table already exists");
   else
+    var columns = req.body.columns.split(",").map(s=>s.trim());
+    // TODO: change UI, pass actual metadata
+    var meta = columns.map(() => {});
     ws.createTable(req.session.user,
       req.body.name, req.body.description,
-      req.body.columns.split(",").map(s=>s.trim()));
+      columns, meta);
     res.end();
 });
 app.post("/table/:name/delete", util, isOwnerOrAdmin, function(req, res) {

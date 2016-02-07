@@ -50,6 +50,9 @@ Handlebars.registerHelper({
   },
   ifCensored: function(expr) {
     return expr.censored ? "censored" : "";
+  },
+  inc: function(i) {
+    return i+1;
   }
 });
 
@@ -122,12 +125,19 @@ var routes = {
   tableList: function() {
     document.title = "Tables";
     $(".alert").fadeOut();
+    var numColumns = 0;
     $.getJSON("/table/list", function(tables) {
       $("#content").html(templates.tables(tables));
+      $("#table-column-button").before(templates.column({i: numColumns}));
+      numColumns++;
       $(".btn-delete").on("click", function() {
         var name = $(this).data("table");
         $.post(`/table/${name}/delete`).done(routes.tableList)
           .fail(res => displayError(res.responseText));
+      });
+      $("#table-column-button").click(function() {
+        $("#table-column-button").before(templates.column({i: numColumns}));
+        numColumns++;
       });
       $("#table-create-button").click(function() {
         $.post("/table/create", $("#table-create-form").serialize())
@@ -273,7 +283,7 @@ $(document).ready(function() {
 
   // precompile handlebars templates
   ["users", "tables", "login", "logout", "alert", "eval", "home", "drop",
-   "import", "admin", "input", "output"].forEach(
+   "import", "admin", "input", "output", "column"].forEach(
     n => templates[n] = Handlebars.compile($(`#${n}-template`).html())
   );
   Handlebars.registerPartial('drop', templates.drop);

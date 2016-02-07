@@ -11,6 +11,7 @@ class Table {
     ot.description = it.description;
     ot.owner = it.owner;
     ot.columns = it.columns;
+    ot.meta = it.meta;
     ot.cells = it.cells.map(row => fromInputRow(row));
     return ot;
   }
