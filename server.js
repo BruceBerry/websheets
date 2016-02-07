@@ -315,4 +315,4 @@ app.post("table/:name/:row/:col/upload", util, isUser, upload.single("data"), fu
   // TODO: convert to base64, writecell, mark as binary
 });
 
-var server = app.listen(argv.port, "localhost");
+var server = app.listen(argv.port, argv.address);

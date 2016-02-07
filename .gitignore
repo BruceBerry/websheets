@@ -5,4 +5,5 @@ wf.js
 wfgen.js
 .secret
 .mailgun
+.~*\#
 

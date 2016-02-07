@@ -15,7 +15,7 @@ watch:
 run:
 	jade -P static/
 	jison app/wf.jison -o app/wf.js
-	nodemon -- $(es6flags) server.js
+	nodemon -- $(es6flags) server.js --address=0.0.0.0
 
 dockerrun:
 	git pull

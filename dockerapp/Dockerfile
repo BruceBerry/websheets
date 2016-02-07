@@ -23,4 +23,4 @@ RUN npm install
 RUN jade -P static/
 RUN jison app/wf.jison -o app/wf.js
 EXPOSE 8000
-CMD ["make", "update"]
+CMD ["make", "dockerrun"]
