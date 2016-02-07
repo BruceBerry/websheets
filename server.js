@@ -233,9 +233,17 @@ app.post("/table/create", isUser, function(req,res) {
   if (ws.input[req.body.name])
     res.status(403).end("Table already exists");
   else
-    var columns = req.body.columns.split(",").map(s=>s.trim());
-    // TODO: change UI, pass actual metadata
-    var meta = columns.map(() => {});
+    var columns = [];
+    var meta = [];
+    for (var i = 0; i < req.body.numcols; i++) {
+      columns.push(req.body["col-name-" + i]);
+      meta.push({
+        description: req.body["col-desc-" + i],
+        control: req.body["col-control-" + i],
+        hidden: req.body["col-hidden-" + i] === "on"
+      });
+    }
+    debugger;
     ws.createTable(req.session.user,
       req.body.name, req.body.description,
       columns, meta);

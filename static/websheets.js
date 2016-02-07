@@ -140,7 +140,7 @@ var routes = {
         numColumns++;
       });
       $("#table-create-button").click(function() {
-        $.post("/table/create", $("#table-create-form").serialize())
+        $.post("/table/create", $("#table-create-form").serialize() + `&numcols=${numColumns}`)
           .done(routes.tableList)
           .fail(res => displayError(res.responseText));
       });
