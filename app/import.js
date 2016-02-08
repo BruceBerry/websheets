@@ -39,16 +39,24 @@ var importTable = function(ws, user, csv) {
 
   console.log("Importing", tname);
   
-  var [columns, ...data] = getSquare(csv, 3, 0);
+  var [columns, ...data] = getSquare(csv, 6, 0);
+  
+  var descs = csv[3].slice(1, columns.length);
+  var controls = csv[4].slice(1, columns.length);
+  var hiddens = csv[5].slice(1, columns.length);
+  debugger;
+  var meta = _.zip(descs,controls,hiddens);
+  meta = _.map(meta, ([d,c,h]) => ({description: d, control: c || "Text", hidden: h !== ""}));
+
   col = columns.length + 2;
   // actually there's no need to scan height, we know the size
-  var [columns2, ...perms] = getSquare(csv, 3, col);
+  var [columns2, ...perms] = getSquare(csv, 6, col);
   columns.shift();
   columns2.pop();
   if (columns.toString() !== columns2.toString())
     throw "Format error " + columns + " != " + columns2;
   
-  var table = new i.Table(tname, tdesc, user, columns);
+  var table = new i.Table(tname, tdesc, user, columns, meta);
   var owcols = ["_owner", ...columns];
   table.cells = _(data).map((r,ix) => {
     return _.object(_(r).map((c,cx) => {

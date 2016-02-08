@@ -363,7 +363,7 @@ block content
                   <code contenteditable="true">{{this.string}}</code>
                 </td>
               {{/if}}
-              {{#if (eq this.control "Boolean")}}
+              {{#if (and (eq this.control "Boolean") (not this.censored))}}
               <td class="control-boolean" data-col="{{@key}}"><input type="checkbox" {{#if this.data.value}}checked{{/if}}></td>
               {{/if}}
               {{#if (eq this.control "Binary")}}
