@@ -27,7 +27,7 @@ function interact(table, mode) {
   });
 
   
-  var sel = "td:not(.disabled):not(.side-opt)";
+  var sel = "td.control-text";
   $(sel).on("mouseenter", function() {
     var $this = $(this);
     if ($this.data("editing"))
@@ -89,6 +89,50 @@ function interact(table, mode) {
     }
 
   });
+
+  $("td.control-boolean input").change(function() {
+    var column = this.parentElement.dataset.col;
+    var row = this.parentElement.parentElement.dataset.row;
+    var newVal = this.checked;
+    var body = {
+      src: newVal.toString(),
+      row,
+      column
+    };
+    $.post(`/table/${table.name}/edit`, body)
+      .done(() => routes[mode + "Table"](table.name))
+      .fail(() => displayError(`Cannot set ${column} to ${newVal}`));
+  });
+
+  $("td.control-binary input").change(function() {
+    var f = this.files[0];
+    if (!f)
+      return;
+    var fd = new FormData();
+    fd.append("data", f);
+    var col = this.parentElement.parentElement.dataset.col;
+    var row = this.parentElement.parentElement.parentElement.dataset.row;
+    $.ajax({
+      url: `/table/${table.name}/${row}/${col}/upload`,
+      data: fd,
+      processData: false,
+      contentType: false,
+      type: 'POST'
+    }).done(() => routes[mode + "Table"](table.name))
+      .fail(res => displayError(res.responseText));
+  });
+
+  $("td.control-binary span.glyphicon-remove").click(function() {
+    var body = {
+        src: "null",
+        column: this.parentElement.dataset.col,
+        row: this.parentElement.parentElement.dataset.row,
+      };
+      $.post(`/table/${table.name}/edit`, body)
+        .done(() => routes[mode + "Table"](table.name))
+        .fail(res => displayError(res.responseText));
+  });
+  
 
 
   $("#add-row").on("click", function() {

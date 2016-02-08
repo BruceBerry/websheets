@@ -18,7 +18,6 @@ var config = {
 
 // TODO: why is 'w' provided into the cell context? we really need to stop overriding Handlebars.compile
 
-
 var lh = function(hash) {
   location.hash = "#" + hash;
 }; 

@@ -22,8 +22,10 @@ class WebSheet {
     this.intervalID = setInterval(() => this.timeCheck(), 10*1000);
     this.timeCheck();
     this.createTable("admin", "prova", "here", ["a", "bb", "ab"],
-      [{description: "a"}, {description: "-bb"}, {description: "c<br>c\nc\"c", hidden: true}]);
+      [{description: "a", control: "Text"}, {description: "-bb", control: "Boolean"}, {description: "c<br>c\nc\"c", control: "Binary", hidden: true}]);
     this.input.prova.addRow("admin");
+    this.input.prova.addRow("admin");
+     
   }
 
   save(path) {
@@ -168,9 +170,20 @@ class WebSheet {
         var colMeta = _.findWhere(otable.meta, {name: colName});
         cell.control = colMeta.control;
         cell.hidden = colMeta.hidden;
+        if (cell.control === "Binary" && !cell.censored) {
+          // 2. delete uncensored binary data and replace w/ size, handling encoding
+          debugger;
+          if (cell.data.type === "Tuple" && cell.data.map.type.value === "binary") {
+            cell.size = Math.floor(cell.data.map.length.value / 1024);
+            cell.filename = cell.data.map.filename.value;
+          } else {
+            cell.size = 0;
+            cell.filename = "[empty]";
+          }
+          delete cell.data;
+        }
       });
     });
-    // 2. TODO delete uncensored binary data and replace w/ size, handling encoding
     return otable;
   }
   evalString(user, src) {

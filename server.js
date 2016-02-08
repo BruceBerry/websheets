@@ -8,7 +8,7 @@ var favicon = require("serve-favicon");
 var debug = require("express-debug");
 var fibrous = require("fibrous");
 var _ = require("underscore");
-var Magic = require('mmmagic').Magic;
+var {Magic, MAGIC_MIME_TYPE} = require('mmmagic');
 
 var fs = require("fs");
 var os = require("os");
@@ -234,7 +234,7 @@ app.get("/table/list", isUser, function(req,res) {
 app.post("/table/create", isUser, function(req,res) {
   if (ws.input[req.body.name])
     res.status(403).end("Table already exists");
-  else
+  else {
     var columns = [];
     var meta = [];
     for (var i = 0; i < req.body.numcols; i++) {
@@ -245,11 +245,11 @@ app.post("/table/create", isUser, function(req,res) {
         hidden: req.body["col-hidden-" + i] === "on"
       });
     }
-    debugger;
     ws.createTable(req.session.user,
       req.body.name, req.body.description,
       columns, meta);
     res.end();
+  }
 });
 app.post("/table/:name/delete", util, isOwnerOrAdmin, function(req, res) {
   delete ws.input[req.params.name];
@@ -315,17 +315,31 @@ app.get("/table/:name/:row/:col", util, isUser, function(req, res) {
 app.get("/table/:name/:row/:col/download", util, isUser, function(req, res) {
   var {name, row, col} = req.params;
   var cell = ws.getCell(req.session.user, name, row, col);
-  // TODO: test for failure and return error page
-  // TODO: supply base64 field for binary data
-  if (cell.base64) {
-    var buf = new Buffer(cell.base64, "base64");
-    var ctype = Magic.sync.detect(buf);
-    res.type(ctype).end(buf);
-  } else
-    res.end(cell.string);
+  if (cell.censored) {
+    res.status(500).end("Cannot access resource");
+    return;    
+  }
+  debugger;
+  if (cell.data.type !== "Tuple" || cell.data.map.type.value !== "binary") {
+    res.status(500).end("No file in cell");
+    return;
+  }
+  var buf = new Buffer(cell.data.map.data.value, "base64");
+  var m = new Magic(MAGIC_MIME_TYPE);
+  var ctype = m.sync.detect(buf);
+  res.set('Content-Disposition', `attachment;filename="${cell.data.map.filename.value}"`);
+  res.type(ctype).end(buf);
 });
-app.post("table/:name/:row/:col/upload", util, isUser, upload.single("data"), function(req, res) {
-  // TODO: convert to base64, writecell, mark as binary
+app.post("/table/:name/:row/:col/upload", util, isUser, upload.single("data"), fibrous.middleware, function(req, res) {
+  var b = fs.readFileSync(req.file.path);
+  var b64 = b.toString("base64");
+  // TODO: instead, store an array with [filename, b64file], so that you can
+  // display the filename too and name the downloaded file the same.
+  // use req.path.originalname
+  // eventually you can store a filename in the ws and put the actual file on disk
+  ws.writeCell(req.session.user, req.params.name, req.params.row, req.params.col,
+    `{type: "binary", filename: "${req.file.originalname}", data: "${b64}", length: ${b.length}}`);
+  res.end();
 });
 
 var server = app.listen(argv.port, argv.address);

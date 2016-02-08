@@ -215,7 +215,7 @@ block content
         <tr data-perm="read">
           <th>Read</th>
           {{#each table.perms.read}}
-          <td class="editable {{ifError this}}" data-col="{{@key}}" data-src="{{this.src}}">
+          <td class="control-text editable {{ifError this}}" data-col="{{@key}}" data-src="{{this.src}}">
             <code contenteditable="true">{{{pcode this.src}}}</code>
           </td>
           {{/each}}
@@ -223,7 +223,7 @@ block content
         <tr data-perm="write">
           <th>Write</th>
           {{#each table.perms.write}}
-          <td class="editable" data-col="{{@key}}" data-src="{{this.src}}">
+          <td class=" control-text editable" data-col="{{@key}}" data-src="{{this.src}}">
             <code contenteditable="true">{{{pcode this.src}}}</code>
           </td>
           {{/each}}
@@ -231,7 +231,7 @@ block content
         <tr data-perm="init">
           <th>Init</th>
           {{#each table.perms.init}}
-          <td class="editable" data-col="{{@key}}" data-src="{{this.src}}">
+          <td class="control-text editable" data-col="{{@key}}" data-src="{{this.src}}">
             <code contenteditable="true">{{{pcode this.src}}}</code>
           </td>
           {{/each}}
@@ -242,7 +242,7 @@ block content
           {{#each table.columns}}
           <td class="disabled"></td>
           {{/each}}
-          <td class="editable" data-col="row" data-src="{{table.perms.add.row.src}}">
+          <td class="control-text editable" data-col="row" data-src="{{table.perms.add.row.src}}">
             <code contenteditable="true">{{{pcode table.perms.add.row.src}}}</code>
           </td>          
         </tr>
@@ -251,7 +251,7 @@ block content
           {{#each table.columns}}
           <td class="disabled"></td>
           {{/each}}
-          <td class="editable" data-col="row" data-src="{{table.perms.del.row.src}}">
+          <td class="control-text editable" data-col="row" data-src="{{table.perms.del.row.src}}">
             <code contenteditable="true">{{{pcode table.perms.del.row.src}}}</code>
           </td>          
         </tr>
@@ -274,12 +274,12 @@ block content
         {{#each table.cells}}
         <tr data-row="{{@index}}">
           <td class="side-opt">{{> drop}}</td>
-          <td class="editable" data-col="_owner" data-src="{{this._owner}}">
+          <td class="control-text editable" data-col="_owner" data-src="{{this._owner}}">
             <code contenteditable="true">{{this._owner}}</code>
           </td>
           {{#each this}}
           {{#if (neq this.src undefined)}}
-          <td class="editable censored-{{this.censored}}" data-col="{{@key}}" data-src="{{this.src}}" data-censored="{{this.censored}}">
+          <td class="control-text editable censored-{{this.censored}}" data-col="{{@key}}" data-src="{{this.src}}" data-censored="{{this.censored}}">
             <code contenteditable="true">{{{pcode this.src}}}</code>
           </td>
           {{/if}}
@@ -331,16 +331,41 @@ block content
         <tr data-row="{{@index}}">
           <td class="side-opt">{{> drop}}</td>
           {{#if ../w.config.showHidden}}
-            <td class="editable" data-col="_owner" data-src="{{this._owner}}">
+            <td class="control-text editable" data-col="_owner" data-src="{{this._owner}}">
               <code contenteditable="true">{{this._owner}}</code>
             </td>
           {{/if}}
           {{#each this}}
           {{#if (and (neq @key "w") (neq @key "_owner"))}}
             {{#if (or ../../w.config.showHidden (not this.hidden))}}
-              <td class="editable wf-{{this.state}} censored-{{this.censored}}" data-col="{{@key}}" data-src="{{this.string}}" data-state="{{this.state}}" data-censored="{{this.censored}}">
-                <code contenteditable="true">{{this.string}}</code>
+              <!-- censored booleans revert to control = text -->
+              <!-- if control === "Text" || control === "Boolean" && censored-->
+              {{#if (or (eq this.control "Text") (and (eq this.control "Boolean") this.censored))}}
+                <td class="control-text editable wf-{{this.state}} censored-{{this.censored}}" data-col="{{@key}}" data-src="{{this.string}}" data-state="{{this.state}}" data-censored="{{this.censored}}">
+                  <code contenteditable="true">{{this.string}}</code>
+                </td>
+              {{/if}}
+              {{#if (eq this.control "Boolean")}}
+              <td class="control-boolean" data-col="{{@key}}"><input type="checkbox" {{#if this.data.value}}checked{{/if}}></td>
+              {{/if}}
+              {{#if (eq this.control "Binary")}}
+              <td class="control-binary" data-col="{{@key}}">
+                {{#if (and (not this.censored) (neq this.size 0))}}
+                Filename: {{this.filename}}, Size: {{this.size}}kB
+                <span class="glyphicon glyphicon-remove"></span>
+                <a class="glyph" target="_blank" href="/table/{{@root.table.name}}/{{@../key}}/{{@key}}/download">
+                  <span class="glyphicon glyphicon-download"></span>
+                </a>
+                {{/if}}
+                <form style="display:inline">
+                  <label for="upload-binary-{{@../key}}">
+                  <span class="glyphicon glyphicon-upload"></span>
+                  </label>
+                  <input id="upload-binary-{{@../key}}" type="file" style="display:none" />
+                </form>
+
               </td>
+              {{/if}}
             {{/if}}
           {{/if}}
           {{/each}}

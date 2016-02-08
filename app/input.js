@@ -12,7 +12,6 @@ class Table {
     this.description = description;
     this.owner = owner;
     this.columns = columns;
-    debugger;
     this.meta = meta;
     // includes column names
     for (var i = 0; i < this.meta.length; i++)

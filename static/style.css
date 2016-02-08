@@ -78,6 +78,16 @@ code .func {
    text-shadow: 0 0 3px rgba(0,0,0,0.8);
 }
 
+.censored-true input {
+/*   color: transparent !important;
+   text-shadow: 0 0 3px rgba(0,0,0,0.8);
+*/
+  background-color: rgba(0,0,0,0.1);
+
+  /*filter: alpha(opacity=0.5);*/
+}
+
+
 .invisible {
   display: none;
 }
@@ -94,4 +104,9 @@ td.editable > code {
 
 th.grey-hidden {
   color: #aaaaaa;
+}
+
+a.glyph, a.glyph:hover {
+  color: #333;
+  text-decoration: none;
 }
