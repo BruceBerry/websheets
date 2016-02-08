@@ -181,6 +181,7 @@ class WebSheet {
             cell.filename = "[empty]";
           }
           delete cell.data;
+          delete cell.string;
         }
       });
     });
