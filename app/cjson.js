@@ -29,6 +29,7 @@ var stringify = exports.stringify = function(obj) {
   return JSON.stringify(obj, replacer);
 };
 
+// TODO: messes with Date.prototype.toString somehow
 Date.prototype.toJSON = function() { return {_type: "Date", s: this.valueOf() }; };
 
 var parse = exports.parse = function(str) { return JSON.parse(str, reviver); };

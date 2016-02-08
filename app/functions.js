@@ -133,16 +133,30 @@ module.exports = {
   }
 };
 
-// to ease debugging, if you pass a number N you set the trigger to N seconds in the future
+// negative number => -x secs from the moment it was evaluated. unfortunately
+// it will not work well for anything other than read permissions, because the
+// other permissions are always reevaluated
+// positive number: secs from unix epoch (unix-style)
+// \d+:\d+ string => that time today
+// any other string => parsed by the native date implementation
 var vToDate = function(v) {
+  var hm_re = /^(\d+):(\d+)$/;
   var d;
-  if (typeof v.value === "string")
-    d = new Date(v.value);
-  else if (typeof v.value === "number") {
+  var m;
+  if (typeof v.value === "string" && (m = hm_re.exec(v.value))) {
+    var [hrs, mins] = [parseInt(m[1]),parseInt(m[2])];
     d = new Date();
-    d.setSeconds(d.getSeconds()+v.value);
-  }
-  if (isNaN(d.getYear()))
+    d.setMinutes(mins);
+    d.setHours(hrs);
+  } else if (typeof v.value === "string")
+    d = new Date(v.value);    
+  else if (typeof v.value === "number" && v.value <= 0) {
+    d = new Date();
+    d.setSeconds(d.getSeconds()-v.value); // actually summing it
+  } else if (typeof v.value === "number")
+    d = new Date(v.value);
+
+  if (isNaN(d.getFullYear()))
     throw `Invalid date format: ${v.toString()}`;
   return d;
 };
