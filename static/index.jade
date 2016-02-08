@@ -283,6 +283,24 @@ block content
             <code contenteditable="true">{{{pcode this.src}}}</code>
           </td>
           {{/if}}
+          {{#if (eq this.control "Binary")}}
+          <td class="control-binary" data-col="{{@key}}">
+            {{#if (and (not this.censored) (neq this.size 0))}}
+            Filename: {{this.filename}}, Size: {{this.size}}kB
+            <span class="glyphicon glyphicon-remove"></span>
+            <a class="glyph" target="_blank" href="/table/{{@root.table.name}}/{{@../key}}/{{@key}}/download">
+              <span class="glyphicon glyphicon-download"></span>
+            </a>
+            {{/if}}
+            <form style="display:inline">
+              <label for="upload-binary-{{@../key}}">
+              <span class="glyphicon glyphicon-upload"></span>
+              </label>
+              <input id="upload-binary-{{@../key}}" type="file" style="display:none" />
+            </form>
+
+          </td>
+          {{/if}}
           {{/each}}
         </tr>
         {{/each}}
@@ -363,7 +381,6 @@ block content
                   </label>
                   <input id="upload-binary-{{@../key}}" type="file" style="display:none" />
                 </form>
-
               </td>
               {{/if}}
             {{/if}}

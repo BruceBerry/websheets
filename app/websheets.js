@@ -172,7 +172,6 @@ class WebSheet {
         cell.hidden = colMeta.hidden;
         if (cell.control === "Binary" && !cell.censored) {
           // 2. delete uncensored binary data and replace w/ size, handling encoding
-          debugger;
           if (cell.data.type === "Tuple" && cell.data.map.type.value === "binary") {
             cell.size = Math.floor(cell.data.map.length.value / 1024);
             cell.filename = cell.data.map.filename.value;

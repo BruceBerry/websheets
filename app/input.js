@@ -75,12 +75,29 @@ class Table {
             if (colName === "_owner")
               return c;
             var nc = c.deepClone();
-            delete nc.ast;
-            delete nc.oldData;
             if (!ws.opts.debug && !ws.canRead(user, this.name, rIx, colName)) { 
               nc.src = "[[censored]]";
               nc.censored = true;
             }
+            // binary logic is copied from getOutputTable, wasn't sure if i can factor it out
+            // technically this stuff is unevaluated but binary fields are always literals
+            var colMeta = _.findWhere(this.meta, {name: colName});
+            nc.control = colMeta.control;
+            nc.hidden = colMeta.hidden;
+            if (nc.control === "Binary" && !nc.censored) {
+              debugger;
+              if (nc.ast.type === "Tuple" && nc.ast.map.type.value === "binary") {
+                nc.size = Math.floor(nc.ast.map.length.value / 1024);
+                nc.filename = nc.ast.map.filename.value;
+              } else {
+                nc.size = 0;
+                nc.filename = "[empty]";
+              }
+              delete nc.src;
+            }
+
+            delete nc.ast;
+            delete nc.oldData;
             return nc;
           }
         )
