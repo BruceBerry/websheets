@@ -12,7 +12,7 @@ watch:
   done
 
 docker:
-	cd dockerapp; sudo docker build --build-arg CACHE_DATE="$(date)" .
+	cd dockerapp; sudo docker build --build-arg CACHE_DATE="$(shell date)" .
 
 # it will run with the default password, add --defaultPass=XXX in your container
 publicrun:
