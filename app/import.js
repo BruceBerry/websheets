@@ -44,7 +44,6 @@ var importTable = function(ws, user, csv) {
   var descs = csv[3].slice(1, columns.length);
   var controls = csv[4].slice(1, columns.length);
   var hiddens = csv[5].slice(1, columns.length);
-  debugger;
   var meta = _.zip(descs,controls,hiddens);
   meta = _.map(meta, ([d,c,h]) => ({description: d, control: c || "Text", hidden: h !== ""}));
 

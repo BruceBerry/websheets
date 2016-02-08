@@ -111,12 +111,14 @@ module.exports = {
     return v;
   },
   AFTER: function(ws, user, env, v) {
+    v = v.resolve(ws, user);
     var d = vToDate(v);
     if (d > new Date())
       return new ast.ScalarValue(false).addDeps(new ast.TimeDep(d));
     return new ast.ScalarValue(true);
   },
   TRIGGER: function(ws, user, env, v) {
+    v = v.resolve(ws, user);
     var d = vToDate(v);
     var name, row, col, owner;
     try {
