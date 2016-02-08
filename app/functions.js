@@ -40,12 +40,22 @@ module.exports = {
     if (args.length === 1 && args[0].isList()) // array input
       args = args[0].values;
     var result = _.reduce(args, (acc, arg) => {
-      arg.resolve(ws, user);
+      arg = arg.resolve(ws, user);
       if (typeof arg.value !== "number")
         throw `Cannot sum ${arg.toString()}`;
       return acc + arg.value;
     }, 0);
     return new ast.ScalarValue(result).addDeps(args);
+  },
+  len: function(ws, user, env, arg) {
+    if (arg.isTable() && arg.row === "*")
+      return new ast.ScalarValue(ws.input[arg.name].cells.length);
+    arg = arg.resolve(ws, user);
+    if (arg.isList())
+      return new ast.ScalarValue(arg.values.length).addDeps(arg);
+    else if (arg.isTuple())
+      return new ast.ScalarValue(Object.keys(arg.map).length).addDeps(arg);
+    throw `Cannot calculate length on ${arg.toString()}`;
   },
   MAIL: function(ws, user, env, ...args) {
     // TODO: user recipient does not use canRead
