@@ -7,6 +7,7 @@ LABEL Description="This image pulls the current git version of websheets and run
 
 RUN apt-get update
 RUN apt-get install -y npm nodejs git wget inotify-tools python-xlrd
+RUN apt-get install -y nano
 
 RUN npm install -g n
 RUN n 5.3.0
