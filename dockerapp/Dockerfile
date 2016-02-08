@@ -16,6 +16,7 @@ RUN useradd -ms /bin/bash ws
 USER ws
 WORKDIR /home/ws
 
+ARG CACHE_DATE="Mon Feb  8 11:29:00 EST 2016"
 RUN git clone https://github.com/BruceBerry/websheets
 
 WORKDIR websheets

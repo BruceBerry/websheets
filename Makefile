@@ -11,6 +11,9 @@ watch:
     jade -P static/; \
   done
 
+docker:
+	cd dockerapp; sudo docker build --build-arg CACHE_DATE="$(date)" .
+
 # it will run with the default password, add --defaultPass=XXX in your container
 publicrun:
 	jade -P static/
