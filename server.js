@@ -27,6 +27,7 @@ var argv = argParser(process.argv.slice(2), {
     address: "localhost",
     saveFile: os.homedir() + "/.websheets",
     admin: true, // if not logged in, always logs you in as admin
+    defaultPass: "pass", // change this in production
     newAccounts: true, // prevent creation of new accounts
     autoEval: true, // should viewing an output table trigger evaluation of the whole table?
     debug: false, // if true, json responses leak debug information, and only
@@ -37,7 +38,8 @@ var argv = argParser(process.argv.slice(2), {
     importUsers: true, // when importing, create a user for each unknown owner row
     adminCanSwitch: true, // once you login as admin, use /user/:user/login to switch around
                           // unknown users are created automatically
-  }
+  },
+  boolean: ["admin", "newAccounts", "autoEval", "debug", "verbose", "adminReads", "sendMail", "importUsers", "adminCanSwitch"]
 });
 console.log("Listening on port", argv.port);
 

@@ -64,7 +64,7 @@ var importTable = function(ws, user, csv) {
       if (col === "_owner") {
         // also add users with a default user/pass
         if (ws.opts.importUsers)
-          ws.createUser(c, "pass");
+          ws.createUser(c, ws.opts.defaultPass);
         return [col, c];
       }
       else {

@@ -432,11 +432,14 @@ exports.Call = class Call extends Node {
   toString() { return `${this.name}(${this.args.map(k=>k.toString()).join(", ")})`; }
   children() { return this.args; }
   eval(ws, user, env) {
+    // TODO: (if there is a need for it) WF functions as reusable asts that you just eval into.
     var args = _.map(this.args, arg => arg.eval(ws, user, env));
     if (ws.functions[this.name]) {
-      // env is passed for privileged functions like trust
+      // env is passed for privileged functions like trust that need some extra info
       return ws.functions[this.name](ws, user, env, ...args);
       // builtin functions do not automatically inherit argument deps.
+      // so their implementation can introduce only those that are necessary
+      // (e.g. trust, fix, short-circuit semantics)
     } else if (ws.scripts[this.name]) {
       var script = ws.scripts[this.name];
       // * output: all args (including nested deps) and all cells fetched through
@@ -450,6 +453,9 @@ exports.Call = class Call extends Node {
       // full control on the dependencies. Thre is no security issue, it is basically
       // an automatic TRUST wrap, which is fine since we impose the same preconditions.
       // => we call canRead right here, then you get to keep your values dep-free.
+
+      // TODO: evalString(src), writeCell(t,r,c,src), getCell(t,r,c), addRow(i?), deleteRow(i), createTable(...), deleteTable(t)
+      // make a wrapper on the main ws api where the user is fixed
       if (script.type === "js") {
         throw "JS support not implemented";
       } else if (script.type === "bash") {

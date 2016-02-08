@@ -3,7 +3,6 @@ all:
 	jade -P static/index.jade
 
 es6flags = --harmony_destructuring --harmony_default_parameters --harmony_spreadcalls --harmony_rest_parameters
-stackflags =  --stack_trace_limit=40 --stack_size=9840
 
 watch:
 	nodemon -- $(es6flags) server.js &
@@ -12,14 +11,11 @@ watch:
     jade -P static/; \
   done
 
-run:
+# it will run with the default password, add --defaultPass=XXX in your container
+publicrun:
 	jade -P static/
 	jison app/wf.jison -o app/wf.js
-	nodemon -- $(es6flags) server.js --address=0.0.0.0
-
-dockerrun:
-	git pull
-	make run
+	nodemon -- $(es6flags) server.js --address=0.0.0.0 --admin=false
 
 debug:
 	node -- debug $(es6flags) server.js
@@ -41,4 +37,4 @@ todo:
 lint:
 	jshint *.js; cd app; jshint *.js; cd ../static; jshint *.js
 
-.PHONY: watch run dockerrun api todo clean debug bdebug lint
+.PHONY: watch publicrun api todo clean debug bdebug lint
