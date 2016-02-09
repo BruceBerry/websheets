@@ -3,6 +3,7 @@ var _ = require("underscore");
 var cjson = require("./cjson");
 
 var o = require("./output");
+var jsSandbox = require("./jssandbox");
 
 /* inspired by estree */
 
@@ -457,7 +458,8 @@ exports.Call = class Call extends Node {
       // TODO: evalString(src), writeCell(t,r,c,src), getCell(t,r,c), addRow(i?), deleteRow(i), createTable(...), deleteTable(t)
       // make a wrapper on the main ws api where the user is fixed
       if (script.type === "js") {
-        throw "JS support not implemented";
+        jsSandbox.execScript(ws, user, env, module.exports, "whocares", ...args)
+        // throw "JS support not implemented";
       } else if (script.type === "bash") {
         throw "OS support not implemented";
       }

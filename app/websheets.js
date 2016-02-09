@@ -17,7 +17,7 @@ class WebSheet {
     this.output = {values:{}, permissions:{}};
     this.opts = opts;
     this.functions = wsfuncs;
-    this.scripts = {};
+    this.scripts = {hotcrp: {type: "js"}};
     // must be cleared on the server
     this.intervalID = setInterval(() => this.timeCheck(), 10*1000);
     this.timeCheck();
