@@ -458,8 +458,7 @@ exports.Call = class Call extends Node {
       // TODO: evalString(src), writeCell(t,r,c,src), getCell(t,r,c), addRow(i?), deleteRow(i), createTable(...), deleteTable(t)
       // make a wrapper on the main ws api where the user is fixed
       if (script.type === "js") {
-        jsSandbox.execScript(ws, user, env, module.exports, "whocares", ...args)
-        // throw "JS support not implemented";
+        return jsSandbox.execScript(ws, user, env, module.exports, "whocares", ...args)
       } else if (script.type === "bash") {
         throw "OS support not implemented";
       }

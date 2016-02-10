@@ -25,7 +25,8 @@ class WebSheet {
       [{description: "a", control: "Text"}, {description: "-bb", control: "Boolean"}, {description: "c<br>c\nc\"c", control: "Binary", hidden: true}]);
     this.input.prova.addRow("admin");
     this.input.prova.addRow("admin");
-     
+    var fibrous = require("fibrous");
+    fibrous(() => { this.import("admin", "xls/hotcrp.xls") })(function() { });
   }
 
   save(path) {
@@ -382,8 +383,9 @@ class WebSheet {
         cell.state = "unevaluated";
         cell.oldData = cell.data;
         cell.oldData.revive = false;
-        cell.data = this.input[name].cells[row][col].deepClone();
       }
+      // needs to be updated also if it's unevaluated, because it's caching the input formula
+      cell.data = this.input[name].cells[row][col].deepClone();
       delete cell.error;
     } else if (type === "writePerm") {
       // we invalidate the cached permission itself for all users
