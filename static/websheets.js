@@ -288,19 +288,42 @@ var routes = {
     displayError("Invalid URL");
   },
   scriptList: function() {
-    $.getJSON("/scripts/list")
+    $.getJSON("/script/list")
       .done(scripts => {
         $("#content").html(templates.scriptList({scripts}));
         var editor = ace.edit("editor");
-        // editor.setTheme("ace/theme/monokai");
         editor.getSession().setMode("ace/mode/javascript");
+        editor.getSession().setUseWrapMode(true);
+
+        // TODO: script delete
+
+        $("#script-create-button").click(function() {
+          var src = editor.getValue();
+          $.post("/script/create", $("#script-create-form").serialize() + "&src=" + encodeURIComponent(src))
+            .done(routes.scriptList)
+            .fail(res => displayError(res.responseText));
+        });        
       })
       .fail(res => displayError(res.responseText));
   },
   scriptEdit: function(name) {
-    $.getJSON(`/scripts/${name}`)
+    $.getJSON(`/script/${name}`)
       .done(script => {
-        templates.scriptEdit(script);
+        var enabled = user === script.author;
+        $("#content").html(templates.scriptEdit({script, enabled}));
+        var editor = ace.edit("editor");
+        editor.getSession().setMode("ace/mode/javascript");
+        editor.getSession().setUseWrapMode(true);
+        editor.setValue(script.src, -1);
+        if (!enabled)
+          editor.setReadOnly(true);
+
+        $("#script-edit-button").click(function() {
+          var src = editor.getValue();
+          $.post(`/script/${name}/edit`, "src=" + encodeURIComponent(src))
+            .done(lh("script/list"))
+            .fail(res => displayError(res.responseText));
+        });        
       })
       .fail(res => displayError(res.responseText));
   }

@@ -2,7 +2,7 @@ all:
 	jison app/wf.jison -o app/wf.js
 	jade -P static/index.jade
 
-es6flags = --harmony_destructuring --harmony_default_parameters --harmony_spreadcalls --harmony_rest_parameters
+es6flags = --harmony_destructuring --harmony_default_parameters --harmony_spreadcalls --harmony_rest_parameters --harmony_proxies
 
 watch:
 	nodemon -- $(es6flags) server.js &

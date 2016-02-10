@@ -15,6 +15,7 @@
     "highlight": true,
     "cleanJunk": true,
     "displayError": true,
-    "doError": true
+    "doError": true,
+    "ace": false
   }
 }

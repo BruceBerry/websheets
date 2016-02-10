@@ -344,10 +344,10 @@ app.post("/table/:name/:row/:col/upload", util, isUser, upload.single("data"), f
   res.end();
 });
 
-app.get("/scripts/list", util, isUser, function(req, res) {
-  res.type("json").end(cjson.stringify(_.omitClone(ws.scripts, "src")));
+app.get("/script/list", util, isUser, function(req, res) {
+  res.type("json").end(cjson.stringify(_.map(ws.scripts, s => _.omitClone(s, "src"))));
 });
-app.post("/scripts/create", util, isUser, function(req, res) {
+app.post("/script/create", util, isUser, function(req, res) {
   if (ws.scripts[req.body.name]) {
     res.status(500).end("Script already exists");
     return;
@@ -355,22 +355,35 @@ app.post("/scripts/create", util, isUser, function(req, res) {
   ws.scripts[req.body.name] = {
     author: req.session.user,
     name: req.body.name,
+    description: req.body.description,
     type: req.body.type,
-    setuid: req.body.setuid,
+    setuid: req.body.setuid === "on",
     src: req.body.src
   };
+  res.end();
 });
-app.get("/scripts/:fname", util, isUser, function(req, res) {
+app.get("/script/:fname", util, isUser, function(req, res) {
   var script = ws.scripts[req.params.fname];
   if (script)
     res.type("json").end(cjson.stringify(script));
   else
     res.status(500).end("No such script");
 });
-app.post("/scripts/:fname/delete", util, isUser, function(req, res) {
+app.post("/script/:fname/edit", util, isUser, function(req, res) {
   var script = ws.scripts[req.params.fname];
-  if (script.author === req.session.user)
+  if (script.author === req.session.user) {
+    script.src = req.body.src;
+    res.end();
+  } else {
+    res.status(500).end("Only the author can edit a script");
+  }
+});
+app.post("/script/:fname/delete", util, isUser, function(req, res) {
+  var script = ws.scripts[req.params.fname];
+  if (script.author === req.session.user) {
     delete ws.scripts[req.params.fname];
+    res.end();
+  }
   else
     res.status(500).end("Only the author can delete a script")
 });

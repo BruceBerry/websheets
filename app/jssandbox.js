@@ -1,4 +1,5 @@
 var _ = require("underscore");
+var Reflect = require("harmony-reflect")
 
 // ast passed to avoid circular dep
 exports.execScript = function(ws, user, env, ast, src, ...args) {
@@ -22,12 +23,43 @@ exports.execScript = function(ws, user, env, ast, src, ...args) {
     },
     findIndex(l, f) {
       return _.findIndex(l, f);
+    },
+    imm(x) {
+      return new ast.ScalarValue(x);
+    },
+    log(s) {
+      console.log(s);
     }
   };
-  return hotcrp(api, ...args);
+  // TODO: this API sucks, it forces evaluation of everything unnecessarily
+  // TODO: this string based API could be sensitive to injection attacks, it would be nice to have stronger typing
+  // TODO: at the very least, support escaping in strings
+  var proxy = new Proxy({}, {       
+    has: function(target, n){
+      if (n === "api" || n === "args")
+        return true;
+      throw "no peeking: " + n;
+    },
+    set: function (target, n, value, receiver){
+      throw "no setting: " + n;
+    },
+    get: function(target, n, receiver){
+      if (n === "api")
+        return api;
+      if (n === "args")
+        return args;
+      throw "no getting: " + n;
+    }
+  });
+  // TODO: freeze primordials
+  return eval(`
+    (function(api, ...args) {
+      with (proxy) {
+        return (function() {
+          "use strict";
+          ${src}
+        }).call(null);
+      }
+    })(api, ...args);
+  `);
 };
-
-/*
-
-
-*/

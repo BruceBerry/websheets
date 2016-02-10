@@ -410,7 +410,11 @@ block content
     <h1>Scripts</h1>
     <ul>
       {{#each scripts}}
-      <li><a href="#script/{{this.name}}">{{this.name}}</a> [{{this.type}}, author={{this.author}}, setuid={{this.setuid}}]</li>
+      <li>
+        <a href="#script/{{this.name}}"><b>{{this.name}}</b></a>
+        [{{this.type}}, author={{this.author}}, setuid={{this.setuid}}]
+        <p>{{this.description}}</p>
+      </li>
       {{/each}}
     </ul>
     <h3>Create New Script</h3>
@@ -436,13 +440,26 @@ block content
             <label><input type="checkbox" name="setuid">Setuid</label>
           </div>
         </div>
-        <label>Source Code</label>
-        <div id="editor">
-/* Type your javascript code in here */
+        <div class="form-group">
+          <label>Source Code</label>
+          <div id="editor">/* Type your code here */</div>
         </div>
+        <button id="script-create-button" class="btn btn-default" type="button">Create</button>
+      </form>
+    </div>
 
   +template#scriptEdit-template.
     <h1>Script Edit</h1>
-    <div id="editor">
+    <div class="col-md-8">
+      {{#if (not enabled)}}
+      <p><b>You cannot edit this script</b></p>
+      {{/if}}
+      <p>{{script.description}}</p>
+      <form id="script-edit-form">
+        <div class="form-group">
+          <div id="editor">
+          </div>
+        </div>
+        <button id='script-edit-button' class='btn btn-default' {{#if (not enabled)}}disabled{{/if}}>Save Changes</button>
+      </form>
     </div>
-    <button id='edit-script' class='btn btn-default'>Save Changes</button>

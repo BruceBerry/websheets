@@ -570,12 +570,15 @@ class WebSheet {
       var {name, ext} = path.parse(f);
       var type = ext === ".js" ? "js" : "bash";
       var src = fs.readFileSync(f, "utf8");
-      var author = /^(?:\/\/|#) user: (\w+)/.exec(src);
+      var author = /^(?:\/\/|#) user: (\w+)/m.exec(src);
       author = author ? author[1] : "admin";
-      var setuid = /^(?:\/\/|#) user: (\w+)/.exec(src);
+      var setuid = /^(?:\/\/|#) setuid: (\w+)/m.exec(src);
       setuid = setuid ? setuid[1] === "true" : false;
+      var description = /^(?:\/\/|#) description: (.+)$/m.exec(src);
+      description = description ? description[1] : "";
       this.scripts[name] = {
         author,
+        description,
         name,
         type,
         setuid,
