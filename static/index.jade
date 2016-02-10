@@ -405,3 +405,44 @@ block content
         {{#if (not @last)}} - {{/if}}          
       {{/each}}]
     </p>
+
+  +template#scriptList-template.
+    <h1>Scripts</h1>
+    <ul>
+      {{#each scripts}}
+      <li><a href="#script/{{this.name}}">{{this.name}}</a> [{{this.type}}, author={{this.author}}, setuid={{this.setuid}}]</li>
+      {{/each}}
+    </ul>
+    <h3>Create New Script</h3>
+    <div class="col-md-6">
+      <form id="script-create-form">
+        <div class="form-group">
+          <label for="name">Name</label>
+          <input type="text" class="form-control" name="name" placeholder="Name (alphanumeric)">
+        </div>
+        <div class="form-group">
+          <label for="description">Description</label>
+          <textarea class="form-control" name="description" placeholder="Description" rows="3"></textarea>
+        </div>
+        <div class="form-group">
+          <label for="type">Type</label>
+          <select class="form-control" name="type">
+            <option value="js">JavaScript</option>
+            <option value="bash">Bash</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <div class="checkbox">
+            <label><input type="checkbox" name="setuid">Setuid</label>
+          </div>
+        </div>
+        <label>Source Code</label>
+        <div id="editor">
+/* Type your javascript code in here */
+        </div>
+
+  +template#scriptEdit-template.
+    <h1>Script Edit</h1>
+    <div id="editor">
+    </div>
+    <button id='edit-script' class='btn btn-default'>Save Changes</button>

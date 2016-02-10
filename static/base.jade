@@ -7,6 +7,7 @@ html(lang="en")
     block title
     
     script(type='text/javascript', src='lib/jquery.js')
+    script(type='text/javascript', src='lib/ace.js')  
     script(type='text/javascript', src='lib/bootstrap/js/bootstrap.js')
     link(rel='stylesheet', href='lib/bootstrap/css/bootstrap.css')
     //- link(rel='stylesheet', href="static/bootstrap/css/bootstrap-thelme.css")
@@ -21,9 +22,11 @@ html(lang="en")
 
         ul.nav.navbar-nav
           li
-            a(href='#users') Users
+            a(href='#user/list') Users
           li
             a(href='#table/list') Tables
+          li
+            a(href='#script/list') Scripts
           li
             a(href='#eval') Eval
           li

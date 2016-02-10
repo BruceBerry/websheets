@@ -344,4 +344,36 @@ app.post("/table/:name/:row/:col/upload", util, isUser, upload.single("data"), f
   res.end();
 });
 
+app.get("/scripts/list", util, isUser, function(req, res) {
+  res.type("json").end(cjson.stringify(_.omitClone(ws.scripts, "src")));
+});
+app.post("/scripts/create", util, isUser, function(req, res) {
+  if (ws.scripts[req.body.name]) {
+    res.status(500).end("Script already exists");
+    return;
+  }
+  ws.scripts[req.body.name] = {
+    author: req.session.user,
+    name: req.body.name,
+    type: req.body.type,
+    setuid: req.body.setuid,
+    src: req.body.src
+  };
+});
+app.get("/scripts/:fname", util, isUser, function(req, res) {
+  var script = ws.scripts[req.params.fname];
+  if (script)
+    res.type("json").end(cjson.stringify(script));
+  else
+    res.status(500).end("No such script");
+});
+app.post("/scripts/:fname/delete", util, isUser, function(req, res) {
+  var script = ws.scripts[req.params.fname];
+  if (script.author === req.session.user)
+    delete ws.scripts[req.params.fname];
+  else
+    res.status(500).end("Only the author can delete a script")
+});
+
+
 var server = app.listen(argv.port, argv.address);

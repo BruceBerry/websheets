@@ -437,28 +437,21 @@ exports.Call = class Call extends Node {
     var args = _.map(this.args, arg => arg.eval(ws, user, env));
     if (ws.functions[this.name]) {
       // env is passed for privileged functions like trust that need some extra info
-      return ws.functions[this.name](ws, user, env, ...args);
       // builtin functions do not automatically inherit argument deps.
       // so their implementation can introduce only those that are necessary
       // (e.g. trust, fix, short-circuit semantics)
+      return ws.functions[this.name](ws, user, env, ...args);
     } else if (ws.scripts[this.name]) {
       var script = ws.scripts[this.name];
-      // * output: all args (including nested deps) and all cells fetched through
-      // the json api become output deps
-      // * login: auto login for this user in the json api (set cookie for js api,
-      //  whitelist host for bash)
-      // * side effects: all cells written through the json api have input deps.
-      // with the json api are deps
-
-      // TODO: is it true? the user running the script could instead have
-      // full control on the dependencies. Thre is no security issue, it is basically
-      // an automatic TRUST wrap, which is fine since we impose the same preconditions.
-      // => we call canRead right here, then you get to keep your values dep-free.
-
-      // TODO: evalString(src), writeCell(t,r,c,src), getCell(t,r,c), addRow(i?), deleteRow(i), createTable(...), deleteTable(t)
-      // make a wrapper on the main ws api where the user is fixed
+      // also here, the user running the script has full control on the
+      // dependencies. Thre is no security issue, it is basically an automatic
+      // TRUST wrap, which is fine since we impose the same preconditions.
+      // we call canRead right here, then you get to keep your values dep-
+      // free.
+      var fuser = script.setuid ? script.author : user;
+      // TODO: canRead
       if (script.type === "js") {
-        return jsSandbox.execScript(ws, user, env, module.exports, "whocares", ...args)
+        return jsSandbox.execScript(ws, fuser, env, module.exports, script.src, ...args)
       } else if (script.type === "bash") {
         throw "OS support not implemented";
       }

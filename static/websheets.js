@@ -279,13 +279,30 @@ var routes = {
       $("#select-user").on("click", function() {
         $.getJSON(`/user/${this.value}/login`);
         // do not update, use this in another window
-      })
+      });
 
     });
 
   },
   error: function() {
     displayError("Invalid URL");
+  },
+  scriptList: function() {
+    $.getJSON("/scripts/list")
+      .done(scripts => {
+        $("#content").html(templates.scriptList({scripts}));
+        var editor = ace.edit("editor");
+        // editor.setTheme("ace/theme/monokai");
+        editor.getSession().setMode("ace/mode/javascript");
+      })
+      .fail(res => displayError(res.responseText));
+  },
+  scriptEdit: function(name) {
+    $.getJSON(`/scripts/${name}`)
+      .done(script => {
+        templates.scriptEdit(script);
+      })
+      .fail(res => displayError(res.responseText));
   }
 };
 
@@ -297,7 +314,7 @@ $(document).ready(function() {
 
   // precompile handlebars templates
   ["users", "tables", "login", "logout", "alert", "eval", "home", "drop",
-   "import", "admin", "input", "output", "column"].forEach(
+   "import", "admin", "input", "output", "column", "scriptList", "scriptEdit"].forEach(
     n => templates[n] = Handlebars.compile($(`#${n}-template`).html())
   );
   Handlebars.registerPartial('drop', templates.drop);
@@ -315,10 +332,12 @@ $(document).ready(function() {
     updateLoginDom();
     // start routing location.hash
     routie({
-      "users": routes.userList,
+      "user/list": routes.userList,
       "table/list": routes.tableList,
       "table/:name/output": routes.outputTable,
       "table/:name/input": routes.inputTable,
+      "script/list": routes.scriptList,
+      "script/:name": routes.scriptEdit,
       "eval": routes.eval,
       "import": routes.import,
       "admin": routes.admin,

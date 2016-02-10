@@ -110,3 +110,7 @@ a.glyph, a.glyph:hover {
   color: #333;
   text-decoration: none;
 }
+
+#editor {
+  height: 500px;
+}

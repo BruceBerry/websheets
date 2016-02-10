@@ -1,6 +1,8 @@
 "use strict";
 var _ = require("underscore");
 var fs = require("fs");
+var glob = require("glob");
+var path = require("path");
 
 var cjson = require("./cjson");
 var i = require("./input");
@@ -25,8 +27,18 @@ class WebSheet {
       [{description: "a", control: "Text"}, {description: "-bb", control: "Boolean"}, {description: "c<br>c\nc\"c", control: "Binary", hidden: true}]);
     this.input.prova.addRow("admin");
     this.input.prova.addRow("admin");
+
     var fibrous = require("fibrous");
-    fibrous(() => { this.import("admin", "xls/hotcrp.xls") })(function() { });
+    fibrous(() => {
+      try {
+        this.import("admin", "xls/hotcrp.xls");
+      } catch (e) {
+        console.log(e);
+      }
+    })(function() { });
+
+    this.importScripts("scripts/");
+
   }
 
   save(path) {
@@ -550,6 +562,25 @@ class WebSheet {
           }
         }
       });
+    });
+  }
+  importScripts(dir) {
+    var files = glob.sync(dir + "*.{js,sh}");
+    files.forEach(f => {
+      var {name, ext} = path.parse(f);
+      var type = ext === ".js" ? "js" : "bash";
+      var src = fs.readFileSync(f, "utf8");
+      var author = /^(?:\/\/|#) user: (\w+)/.exec(src);
+      author = author ? author[1] : "admin";
+      var setuid = /^(?:\/\/|#) user: (\w+)/.exec(src);
+      setuid = setuid ? setuid[1] === "true" : false;
+      this.scripts[name] = {
+        author,
+        name,
+        type,
+        setuid,
+        src
+      };
     });
   }
 }
