@@ -589,3 +589,6 @@ class WebSheet {
 }
 cjson.register(WebSheet);
 exports.WebSheet = WebSheet;
+
+// TODO: logic formulas get tainted failed permissions, so even if there is a true alternative, the value is censored.
+// e.g. a || b, if a == false and b == true, if a is unreadable you can't read the value even though b is true.
