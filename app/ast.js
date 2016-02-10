@@ -433,6 +433,7 @@ exports.Call = class Call extends Node {
   toString() { return `${this.name}(${this.args.map(k=>k.toString()).join(", ")})`; }
   children() { return this.args; }
   eval(ws, user, env) {
+    debugger;
     // TODO: (if there is a need for it) also support WF functions as reusable asts that you just eval into.
     var args = _.map(this.args, arg => arg.eval(ws, user, env));
     if (ws.functions[this.name]) {
@@ -449,6 +450,7 @@ exports.Call = class Call extends Node {
       // we call canRead right here, then you get to keep your values dep-
       // free.
       var fuser = script.setuid ? script.author : user;
+      args = _.map(args, arg => arg.resolve(ws, user));
       // TODO: canRead
       if (script.type === "js") {
         return jsSandbox.execScript(ws, fuser, env, module.exports, script.src, ...args)

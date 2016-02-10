@@ -24,11 +24,14 @@ exports.execScript = function(ws, user, env, ast, src, ...args) {
     findIndex(l, f) {
       return _.findIndex(l, f);
     },
+    sortBy(l, f) {
+      return _.sortBy(l, f);
+    },
     imm(x) {
       return new ast.ScalarValue(x);
     },
-    log(s) {
-      console.log(s);
+    log(...args) {
+      console.log(...args);
     }
   };
   // TODO: this API sucks, it forces evaluation of everything unnecessarily
@@ -51,7 +54,8 @@ exports.execScript = function(ws, user, env, ast, src, ...args) {
       throw "no getting: " + n;
     }
   });
-  // TODO: freeze primordials
+  // TODO: initSES (freeze primordials, patch stuff)
+  debugger;
   return eval(`
     (function(api, ...args) {
       with (proxy) {

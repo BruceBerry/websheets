@@ -203,7 +203,7 @@ class WebSheet {
     var expr = new i.Expr(src, "fromString");
     if (expr.error)
       throw expr.error;
-    return expr.ast.eval(this, user, {}).resolve(this);
+    return expr.ast.eval(this, user, {}).resolve(this, user);
   }
   mkTableEnv(name, user) {
     var table = this.input[name];

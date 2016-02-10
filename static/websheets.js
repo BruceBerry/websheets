@@ -62,6 +62,10 @@ Handlebars.registerHelper({
   inc: function(i) {
     return i+1;
   },
+  swrap: function(s) {
+    s = Handlebars.Utils.escapeExpression(s);
+    return new Handlebars.SafeString(s.replace(/\n/g, "<br>"));
+  },
   wrap: function(s) {
     return s.replace(/\n/g, "<br>");
   },

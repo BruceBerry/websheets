@@ -49,7 +49,7 @@ var importTable = function(ws, user, csv) {
 
   col = columns.length + 2;
   // actually there's no need to scan height, we know the size
-  var [columns2, ...perms] = getSquare(csv, 6, col);
+  var [columns2, ...perms] = getSquare(csv, 6, col, 6);
   columns.shift();
   columns2.pop();
   if (columns.toString() !== columns2.toString())
@@ -100,7 +100,7 @@ var importTable = function(ws, user, csv) {
 
 };
 
-var getSquare = function(csv, rowStart, colStart) {
+var getSquare = function(csv, rowStart, colStart, maxRows = Number.POSITIVE_INFINITY) {
   var row = rowStart, col = colStart;
   var transposed = _.zip(...csv);
   
@@ -115,6 +115,6 @@ var getSquare = function(csv, rowStart, colStart) {
   });
   var rowEnd = _.max(rows);
 
-  rows = csv.slice(rowStart, rowEnd+1);
+  rows = csv.slice(rowStart, Math.min(rowEnd+1, rowStart+maxRows));
   return rows.map(r => r.slice(colStart, colEnd+1));
 };

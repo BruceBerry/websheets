@@ -32,9 +32,9 @@ module.exports = {
   avg: function(ws, user, env, ...args) {
     if (args.length === 1 && args[0].isList()) // array input
       args = args[0].values;
-    var sum = this.sum(ws, user, ...args);
+    var sum = this.sum(ws, user, env, ...args);
     var len = args.length;
-    return new ast.ScalarValue(sum/len).addDeps(args);
+    return new ast.ScalarValue(sum.value/len).addDeps(args);
   },
   sum: function(ws, user, env, ...args) {
     if (args.length === 1 && args[0].isList()) // array input
