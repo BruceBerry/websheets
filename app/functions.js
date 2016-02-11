@@ -111,6 +111,9 @@ module.exports = {
     }
     // go through the deps and set enforce = false on all those deps that can
     // be read by the cell owner.
+    if (owner !== "admin") {
+      console.log("non-admin TRUST", user, owner);
+    }
     v.visitAll(n => {
       _(n.deps).each(d => {
         if (d instanceof ast.NormalDep && d.canRead(ws, owner))

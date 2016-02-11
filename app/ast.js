@@ -433,7 +433,6 @@ exports.Call = class Call extends Node {
   toString() { return `${this.name}(${this.args.map(k=>k.toString()).join(", ")})`; }
   children() { return this.args; }
   eval(ws, user, env) {
-    debugger;
     // TODO: (if there is a need for it) also support WF functions as reusable asts that you just eval into.
     var args = _.map(this.args, arg => arg.eval(ws, user, env));
     if (ws.functions[this.name]) {

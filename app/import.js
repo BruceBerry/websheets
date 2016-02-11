@@ -69,7 +69,9 @@ var importTable = function(ws, user, csv) {
       else {
         var expr = new i.Expr(c, `${tname}.${ix}.${col}`);
         // default owner is the rowOwner. could be the table owner instead.
-        expr._owner = r[0];
+        // expr._owner = r[0];
+        // ERRATA: actually the table owner makes more sense, especially in case of declassification
+        expr._owner = user;
         return [col, expr];
       }
     }));

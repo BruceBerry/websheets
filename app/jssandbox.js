@@ -55,7 +55,6 @@ exports.execScript = function(ws, user, env, ast, src, ...args) {
     }
   });
   // TODO: initSES (freeze primordials, patch stuff)
-  debugger;
   return eval(`
     (function(api, ...args) {
       with (proxy) {

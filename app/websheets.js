@@ -258,8 +258,10 @@ class WebSheet {
     // you have permission to read name.row.col iff the read permission is
     // true AND if all the deps to the read permission are true.
     var allDeps;
-    if (cell.state === "evaluating")
+    if (cell.state === "evaluating") {
+      console.log("Loop", name, row, col);
       throw `Perm Loop`;
+    }
     else if (cell.state === "evaluated") {
       allDeps = _.every(cell.data.deps, d => d.canRead(this, user, whitelist));
       return cell.data.asPerm() && allDeps;
@@ -589,6 +591,3 @@ class WebSheet {
 }
 cjson.register(WebSheet);
 exports.WebSheet = WebSheet;
-
-// TODO: logic formulas get tainted failed permissions, so even if there is a true alternative, the value is censored.
-// e.g. a || b, if a == false and b == true, if a is unreadable you can't read the value even though b is true.
