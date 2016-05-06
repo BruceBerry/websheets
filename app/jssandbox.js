@@ -55,6 +55,7 @@ exports.execScript = function(ws, user, env, ast, src, ...args) {
     }
   });
   // TODO: initSES (freeze primordials, patch stuff)
+  // TODO: well-formed strict expression check
   return eval(`
     (function(api, ...args) {
       with (proxy) {

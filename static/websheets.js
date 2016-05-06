@@ -8,7 +8,7 @@ var templates = {};
 var config = {
   clean: false,
   highlight: true,
-  showHidden: true // show hidden fields in output tables (always shown in input tables)
+  showHidden: false // show hidden fields in output tables (always shown in input tables)
 };
 
 // TODO: does removing hidden column cause bugs b/c of relative positioning?
