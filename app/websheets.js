@@ -14,7 +14,7 @@ var wsfuncs = require("./functions");
 class WebSheet {
   constructor(opts) {
     this.generation = 0;
-    this.users = {admin: {user: "admin", pass: opts.defaultPass}, ric: {user: "ric", pass: opts.defaultPass}};
+    this.users = {admin: {user: "admin", pass: opts.defaultPass}, ric: {user: "bob", pass: opts.defaultPass}};
     this.input = {};
     this.output = {values:{}, permissions:{}};
     this.opts = opts;
@@ -23,10 +23,10 @@ class WebSheet {
     // must be cleared on the server
     this.intervalID = setInterval(() => this.timeCheck(), 10*1000);
     this.timeCheck();
-    this.createTable("admin", "prova", "here", ["a", "bb", "ab"],
-      [{description: "a", control: "Text"}, {description: "-bb", control: "Boolean"}, {description: "c<br>c\nc\"c", control: "Binary", hidden: true}]);
-    this.input.prova.addRow("admin");
-    this.input.prova.addRow("admin");
+    // this.createTable("admin", "prova", "here", ["a", "bb", "ab"],
+    //   [{description: "a", control: "Text"}, {description: "-bb", control: "Boolean"}, {description: "c<br>c\nc\"c", control: "Binary", hidden: true}]);
+    // this.input.prova.addRow("admin");
+    // this.input.prova.addRow("admin");
 
     var fibrous = require("fibrous");
     fibrous(() => {
