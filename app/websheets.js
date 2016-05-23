@@ -11,6 +11,20 @@ var ast = require("./ast");
 var importer = require("./import");
 var wsfuncs = require("./functions");
 
+// new bug, toString fails on error?
+(function () {
+  var fts =  Function.prototype.toString;
+  Function.prototype.toString = function() {
+    try {
+      return fts.apply(this);
+    } catch (e) {
+      if (this.message)
+        return this.message;
+      throw e;
+    }
+  };
+})();
+
 class WebSheet {
   constructor(opts) {
     this.generation = 0;

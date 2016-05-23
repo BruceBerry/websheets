@@ -356,8 +356,6 @@ block content
           {{#each this}}
           {{#if (and (neq @key "w") (neq @key "_owner"))}}
             {{#if (or ../../w.config.showHidden (not this.hidden))}}
-              <!-- censored booleans revert to control = text -->
-              <!-- if control === "Text" || control === "Boolean" && censored-->
               {{#if (or (eq this.control "Text") (and (eq this.control "Boolean") this.censored))}}
                 <td class="control-text editable wf-{{this.state}} censored-{{this.censored}}" data-col="{{@key}}" data-src="{{this.string}}" data-state="{{this.state}}" data-censored="{{this.censored}}">
                   <code contenteditable="true">{{this.string}}</code>
