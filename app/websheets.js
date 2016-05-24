@@ -28,7 +28,7 @@ var wsfuncs = require("./functions");
 class WebSheet {
   constructor(opts) {
     this.generation = 0;
-    this.users = {admin: {user: "admin", pass: opts.defaultPass}, ric: {user: "bob", pass: opts.defaultPass}};
+    this.users = {admin: {user: "admin", pass: opts.defaultPass}, bob: {user: "bob", pass: opts.defaultPass}};
     this.input = {};
     this.output = {values:{}, permissions:{}};
     this.opts = opts;

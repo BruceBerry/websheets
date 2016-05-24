@@ -27,20 +27,12 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/rpelizzi/websheets.git"
-  },
   "keywords": [
     "spreadsheet",
     "ifc",
     "security",
     "web-application"
   ],
-  "author": "Riccardo Pelizzi",
-  "license": "GPL-3.0",
-  "bugs": {
-    "url": "https://github.com/rpelizzi/websheets/issues"
-  },
-  "homepage": "https://github.com/rpelizzi/websheets"
+  "author": "Anonymous",
+  "license": "Proprietary",
 }
