@@ -20,7 +20,7 @@ var config = {
 
 var lh = function(hash) {
   location.hash = "#" + hash;
-}; 
+};
 
 // always allow window
 Handlebars._compile = Handlebars.compile;
