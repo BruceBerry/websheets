@@ -199,7 +199,7 @@ exports.IfThenElse = class IfThenElse extends Node {
     var cond = this.cond.eval(ws, user, env).resolve(ws, user);
     if (typeof cond.value !== "boolean")
       throw `Unsupported if condition for ${cond.toString()}`;
-    if (cond.value === true)
+    if (cond.value)
       return this.then.eval(ws, user, env).addDeps(cond);
     else
       return this.else.eval(ws, user, env).addDeps(cond);
