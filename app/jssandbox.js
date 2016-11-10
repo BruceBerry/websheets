@@ -47,11 +47,17 @@ exports.execScript = function(ws, user, env, ast, src, ...args) {
       throw "no setting: " + n;
     },
     get: function(target, n, receiver){
+      if (Symbol && Symbol.unscopables && n === Symbol.unscopables) {
+        return undefined;
+      }
       if (n === "api")
         return api;
       if (n === "args")
         return args;
-      throw "no getting: " + n;
+      if (typeof n === "symbol")
+        throw "no getting symbol";
+      else
+        throw "no getting: " + n;
     }
   });
   // TODO: initSES (freeze primordials, patch stuff)
