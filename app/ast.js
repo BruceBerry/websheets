@@ -193,13 +193,13 @@ exports.IfThenElse = class IfThenElse extends Node {
     this.then = t;
     this.else = e;
   } 
-  toString() { return `if (${this.cond.toString()}) then (${this.t.toString()}) else (${this.e.toString()})`; }
+  toString() { return `if (${this.cond.toString()}) then (${this.then.toString()}) else (${this.else.toString()})`; }
   children() { return [this.cond, this.then, this.else]; }
   eval(ws, user, env) {
     var cond = this.cond.eval(ws, user, env).resolve(ws, user);
     if (typeof cond.value !== "boolean")
       throw `Unsupported if condition for ${cond.toString()}`;
-    if (cond.value === "true")
+    if (cond.value === true)
       return this.then.eval(ws, user, env).addDeps(cond);
     else
       return this.else.eval(ws, user, env).addDeps(cond);
